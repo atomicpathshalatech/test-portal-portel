@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  height: 100%;
+}
+
+body {
+  @apply bg-surface text-ink antialiased;
+}
+
+/* Material Symbols icon font — required boilerplate for the icon font to render correctly */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+.btn-primary {
+  @apply bg-brand text-white px-5 py-2.5 rounded-full font-medium hover:bg-brand-dark transition-colors;
+}
+
+.btn-secondary {
+  @apply bg-surface-container text-ink px-5 py-2.5 rounded-full font-medium hover:bg-surface-high transition-colors;
+}
+
+.card {
+  @apply bg-surface-lowest rounded-2xl shadow-sm p-6;
+}
+
+.input {
+  @apply w-full border border-surface-highest rounded-xl px-3 py-2 bg-surface-lowest focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent;
+}
+
+.label {
+  @apply block text-sm font-medium text-ink-soft mb-1;
+}
