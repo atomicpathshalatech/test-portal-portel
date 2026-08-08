@@ -81,6 +81,10 @@ Ab Admin → Question Bank → New Question page pe image upload option kaam kar
 6. Deploy hone ke baad, ek baar seed data dalne ke liye (optional): Vercel project → Terminal/local se
    `DATABASE_URL="<production-url>" npm run db:seed` chalayein.
 
+**⚠️ Free (Hobby) plan par deploy karte waqt:** agar deploy error deta hai — "Hobby accounts are limited
+to daily cron jobs" — to `vercel.json` me `crons` block hata do (ya poori file delete kar do agar sirf
+cron ke liye thi) deploy se pehle. Reminder cron kaise chalayein free plan par, section **1b** neeche dekhein.
+
 ## 4. Feature Scope (5-Day MVP)
 
 **Included:**
@@ -99,7 +103,7 @@ Ab Admin → Question Bank → New Question page pe image upload option kaam kar
 - Question ID System — every question gets a permanent unique ID (e.g. `PH10025` — 2-letter subject prefix + 5 digits); import any question into a test instantly by pasting its ID, or bulk-import all questions from a previous test
 - PYQ Categorization — tag questions as PYQ/Practice/Module/Assignment, with a Source Exam & Year dropdown (NEET 2017–2026, AIPMT 1988–2016, JEE Main 2020–2025 Jan/April)
 - Auto-Calculated Test End Time — set only the start time + duration; end time is computed automatically, never entered manually
-- Test Reminders — students get a notification 15 minutes before a test opens and again the moment it goes live (via a Vercel Cron job, see setup below)
+- Test Reminders — students get a notification 15 minutes before a test opens and again the moment it goes live (via a scheduled cron job, see setup below)
 - Post-Test Review & Correction (`/admin/tests/[id]/review`) — see question-wise correct/incorrect/unattempted stats, fix a wrong answer key or add a solution, then recalculate every student's score/rank in one click (they're notified automatically if their result changed)
 - Logo integration — the uploaded Atomic Pathshala logo appears across the UI (sidebar, login, favicon) and as a watermark on every exported PDF (Question Paper, Solution, Certificate)
 - **Two-Step Test Creation** — matches the "test creation never asks for questions" rule: Step 1 (`/admin/tests/builder`) captures only test metadata and defines sections with a target question count (e.g. "Physics — 45 questions"); Step 2 ("Open Test" → `/admin/tests/[id]/add-questions`) shows section-by-section progress (e.g. `28/45`), and clicking into a section gives three question-entry options — Create New (subject auto-locked to that section), Import from Question Bank (filtered to that subject, searchable by ID/text), and Import from a Previous Test's matching-subject section (bulk import)
@@ -141,14 +145,52 @@ Ab Admin → Question Bank → New Question page pe image upload option kaam kar
 - **Integer/Numerical exam-runtime UI** — the question editor now captures a single correct value for these types, but the student-facing exam runtime still renders them as a generic option button rather than a proper numeric input box. This needs a follow-up pass to the exam runtime to detect `type === "INTEGER" | "NUMERICAL"` and show a text/number input instead of the A/B/C/D palette.
 - Match the Column / Statement Based / Assertion Reason are captured with the same 4-option structure as Single Correct (realistic for how NEET typically presents these — fixed combination options) rather than a distinct structured UI (e.g. a real drag-drop matching grid)
 
-## 1b. Test Reminder Notifications — Vercel Cron Setup
+## 1b. Test Reminder Notifications — Cron Setup
 
-`vercel.json` already includes a cron entry that hits `/api/cron/test-reminders` every 5 minutes once
-deployed. To secure it (recommended), set a `CRON_SECRET` environment variable in Vercel — Vercel
-automatically sends it as a Bearer token to your own cron routes. Locally, this endpoint has no
-schedule (crons only run on Vercel); you can manually test it by visiting
-`http://localhost:3000/api/cron/test-reminders` in your browser while a test's open time is within
-15 minutes.
+`vercel.json` originally shipped with a native Vercel cron entry hitting `/api/cron/test-reminders`
+every 5 minutes. **Vercel's Hobby (free) plan only allows cron jobs that run once per day**, so a
+`*/5 * * * *` schedule will fail at deploy time with:
+
+> Hobby accounts are limited to daily cron jobs. This cron expression (`*/5 * * * *`) would run more
+> than once per day. Upgrade to the Pro plan to unlock all Cron Jobs features on Vercel.
+
+Two ways to fix this — pick based on your plan:
+
+### Option A — Free plan (recommended for now)
+
+1. Remove the `crons` block from `vercel.json` entirely (native Vercel cron won't work sub-daily on
+   Hobby, so there's no point keeping it there).
+2. In Vercel → Project → Settings → Environment Variables, set `CRON_SECRET` to a random secret string
+   (e.g. generate one with `openssl rand -hex 32`).
+3. Use a free external scheduler to hit the endpoint every 5 minutes instead — e.g.
+   [cron-job.org](https://cron-job.org):
+   - Create a free account → **Create cronjob**.
+   - URL: `https://<your-domain>.vercel.app/api/cron/test-reminders`
+   - Schedule: every 5 minutes.
+   - Advanced → Headers: add `Authorization: Bearer <your CRON_SECRET value>`.
+   - Save. This calls your route on the same 5-minute cadence, without needing Vercel Pro.
+
+### Option B — Vercel Pro plan
+
+Keep the original `vercel.json` entry as-is:
+```json
+{
+  "crons": [
+    {
+      "path": "/api/cron/test-reminders",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}
+```
+Native Vercel cron will run it every 5 minutes automatically once deployed. Still set `CRON_SECRET` as
+above — Vercel automatically sends it as a Bearer token to your own cron routes, same as Option A.
+
+### Local testing (either option)
+
+Locally, this endpoint has no schedule (cron only runs on Vercel, or via the external service in
+production). You can manually test it by visiting `http://localhost:3000/api/cron/test-reminders` in
+your browser while a test's open time is within 15 minutes.
 
 ## 2c. AI-Assisted Authoring Setup
 
