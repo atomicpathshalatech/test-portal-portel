@@ -18,11 +18,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   });
   if (!attempt) return NextResponse.json({ message: "Not found" }, { status: 404 });
   if (!attempt.test) {
-  return NextResponse.json(
-    { message: "Certificate is only available for test attempts" },
-    { status: 400 }
-  );
-}
+    return NextResponse.json({ message: "Certificates are only available for Test attempts, not DPP practice." }, { status: 400 });
+  }
+  const test = attempt.test;
 
   const isOwner = attempt.studentId === session.id;
   if (!isOwner && !isAdminTier(session.role)) {
@@ -38,7 +36,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   const html = buildCertificateHtml({
     studentName: attempt.student.name,
-    testName: attempt.test.name,
+    testName: test.name,
     score: attempt.score,
     rank: attempt.rank,
     totalStudents,
@@ -56,7 +54,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     return new NextResponse(pdfBuffer as any, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="certificate-${attempt.test.name.replace(/\s+/g, "-")}.pdf"`,
+        "Content-Disposition": `attachment; filename="certificate-${test.name.replace(/\s+/g, "-")}.pdf"`,
       },
     });
   } catch (err: any) {

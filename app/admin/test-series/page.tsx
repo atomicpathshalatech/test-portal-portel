@@ -15,9 +15,9 @@ export default async function TestSeriesListPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-slate-900">Test Series</h1>
-        <Link href="/admin/test-series/new" className="btn-primary">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <h1 className="text-xl sm:text-2xl font-semibold text-slate-900">Test Series</h1>
+        <Link href="/admin/test-series/new" className="btn-primary text-sm px-3 sm:px-5">
           + New Series
         </Link>
       </div>

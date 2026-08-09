@@ -50,6 +50,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     languageMode: test.languageMode,
     durationMin: test.durationMin,
     closeTime: test.closeTime,
+    correctMarks: test.correctMarks,
+    incorrectMarks: test.incorrectMarks,
     sections: safeSections,
   });
 }

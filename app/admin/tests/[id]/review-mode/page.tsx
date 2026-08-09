@@ -93,17 +93,18 @@ export default function ReviewModePage() {
   return (
     <div className="fixed inset-0 flex flex-col bg-slate-100 z-[100]">
       {/* Top bar */}
-      <div className="bg-white border-b px-6 py-3 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <Link href="/admin/tests" className="text-sm text-brand">← Back</Link>
-          <span className="font-semibold text-slate-800">{test.name}</span>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium uppercase">Review Mode</span>
+      <div className="bg-white border-b px-3 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Link href="/admin/tests" className="text-sm text-brand flex-shrink-0">← Back</Link>
+          <span className="font-semibold text-slate-800 truncate max-w-[120px] sm:max-w-none">{test.name}</span>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium uppercase hidden sm:inline">Review Mode</span>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="text-xs text-slate-500">
-            <span className="text-success font-semibold">{approvedCount}</span> approved ·{" "}
-            <span className="text-danger font-semibold">{rejectedCount}</span> rejected ·{" "}
-            {flatQuestions.length - approvedCount - rejectedCount} pending
+        <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+          <div className="text-[11px] sm:text-xs text-slate-500 whitespace-nowrap">
+            <span className="text-success font-semibold">{approvedCount}</span>{" "}
+            <span className="hidden sm:inline">approved · </span>
+            <span className="text-danger font-semibold">{rejectedCount}</span>{" "}
+            <span className="hidden sm:inline">rejected · {flatQuestions.length - approvedCount - rejectedCount} pending</span>
           </div>
           {test.languageMode === "BOTH" && (
             <select className="border rounded px-2 py-1 text-xs" value={lang} onChange={(e) => setLang(e.target.value as "hi" | "en")}>
@@ -116,7 +117,7 @@ export default function ReviewModePage() {
               <button
                 key={d}
                 onClick={() => setDevice(d)}
-                className={`px-3 py-1.5 rounded-full font-medium ${device === d ? "bg-white shadow-sm text-brand" : "text-slate-500"}`}
+                className={`px-2 sm:px-3 py-1.5 rounded-full font-medium ${device === d ? "bg-white shadow-sm text-brand" : "text-slate-500"}`}
               >
                 {d === "mobile" ? "📱" : d === "tablet" ? "💻" : "🖥"}
               </button>
@@ -126,15 +127,15 @@ export default function ReviewModePage() {
       </div>
 
       {/* Body: palette + preview */}
-      <div className="flex-1 flex overflow-hidden">
-        <aside className="w-56 bg-white border-r overflow-y-auto p-3 flex-shrink-0">
+      <div className="flex-1 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden">
+        <aside className="w-full md:w-56 bg-white border-b md:border-b-0 md:border-r overflow-y-auto p-3 flex-shrink-0 order-2 md:order-1">
           <div className="text-xs font-semibold text-slate-500 mb-2 px-1">Question Palette</div>
-          <div className="grid grid-cols-5 gap-1.5">
+          <div className="grid grid-cols-8 xs:grid-cols-10 sm:grid-cols-12 md:grid-cols-5 gap-1.5">
             {flatQuestions.map((q, idx) => (
               <button
                 key={q.id}
                 onClick={() => setFlatIdx(idx)}
-                className={`w-9 h-9 rounded text-xs font-semibold ${statusColor[q.reviewStatus]} ${
+                className={`aspect-square min-w-[2rem] rounded text-xs font-semibold ${statusColor[q.reviewStatus]} ${
                   idx === flatIdx ? "ring-2 ring-brand-dark" : ""
                 }`}
               >
@@ -144,15 +145,15 @@ export default function ReviewModePage() {
           </div>
         </aside>
 
-        <div className="flex-1 overflow-y-auto p-8 flex justify-center">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-8 flex justify-center order-1 md:order-2">
           <div className={`w-full ${DEVICE_WIDTH[device]} transition-all`}>
             {/* Simulated student exam header */}
-            <div className="bg-white rounded-t-xl border px-4 py-3 flex items-center justify-between">
-              <span className="text-sm font-semibold text-slate-700">{test.name}</span>
-              <span className="font-mono text-sm text-danger">{String(test.durationMin).padStart(2, "0")}:00:00</span>
+            <div className="bg-white rounded-t-xl border px-3 sm:px-4 py-3 flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold text-slate-700 truncate">{test.name}</span>
+              <span className="font-mono text-sm text-danger flex-shrink-0">{String(test.durationMin).padStart(2, "0")}:00:00</span>
             </div>
 
-            <div className="bg-white border-x border-b rounded-b-xl p-6">
+            <div className="bg-white border-x border-b rounded-b-xl p-4 sm:p-6">
               <div className="text-xs text-slate-400 mb-2">
                 {current.sectionName} · Question {flatIdx + 1} of {flatQuestions.length} · [{current.question.difficulty}]
               </div>
@@ -204,34 +205,34 @@ export default function ReviewModePage() {
       </div>
 
       {/* Bottom review controls */}
-      <div className="bg-white border-t px-6 py-3 flex items-center justify-between flex-shrink-0">
+      <div className="bg-white border-t px-3 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
         <button
           onClick={() => setFlatIdx(Math.max(0, flatIdx - 1))}
           disabled={flatIdx === 0}
-          className="btn-secondary text-sm disabled:opacity-40"
+          className="btn-secondary text-xs sm:text-sm disabled:opacity-40 order-1"
         >
           ← Previous
         </button>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setReview("REJECTED")} disabled={saving} className="bg-danger text-white px-4 py-2 rounded-lg text-sm">
-            ✗ Reject Question
+        <div className="flex items-center gap-1.5 sm:gap-2 order-3 sm:order-2 w-full sm:w-auto justify-center">
+          <button onClick={() => setReview("REJECTED")} disabled={saving} className="bg-danger text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm">
+            ✗ Reject
           </button>
           <Link
             href={`/admin/tests/${testId}/add-questions?section=${current.sectionId}&slot=${
               test.sections.find((s) => s.id === current.sectionId)!.questions.findIndex((q) => q.id === current.id) + 1
             }`}
-            className="btn-secondary text-sm"
+            className="btn-secondary text-xs sm:text-sm"
           >
-            ✎ Edit Question
+            ✎ Edit
           </Link>
-          <button onClick={() => setReview("APPROVED")} disabled={saving} className="bg-success text-white px-4 py-2 rounded-lg text-sm">
-            ✓ Approve Question
+          <button onClick={() => setReview("APPROVED")} disabled={saving} className="bg-success text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm">
+            ✓ Approve
           </button>
         </div>
         <button
           onClick={() => setFlatIdx(Math.min(flatQuestions.length - 1, flatIdx + 1))}
           disabled={flatIdx === flatQuestions.length - 1}
-          className="btn-secondary text-sm disabled:opacity-40"
+          className="btn-secondary text-xs sm:text-sm disabled:opacity-40 order-2 sm:order-3"
         >
           Next →
         </button>

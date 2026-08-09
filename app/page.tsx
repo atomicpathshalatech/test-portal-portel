@@ -70,6 +70,7 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
             />
+            <Link href="/forgot-password" className="text-xs text-brand mt-1 inline-block">Forgot password?</Link>
           </div>
           <button className="btn-primary w-full" disabled={loading}>
             {loading ? "Signing in..." : "Sign In"}

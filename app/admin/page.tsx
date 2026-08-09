@@ -84,7 +84,7 @@ export default async function AdminDashboard() {
 
   if (manager) {
     const recentAttempts = await prisma.attempt.findMany({
-      where: { status: { in: ["SUBMITTED", "AUTO_SUBMITTED"] }, submittedAt: { gte: sixtyDaysAgo } },
+      where: { status: { in: ["SUBMITTED", "AUTO_SUBMITTED"] }, submittedAt: { gte: sixtyDaysAgo }, testId: { not: null } },
       include: { test: { include: { sections: { include: { questions: true } } } }, student: { select: { name: true } } },
     });
 
@@ -95,11 +95,7 @@ export default async function AdminDashboard() {
       let timeCount = 0;
       for (const a of attempts) {
         if (!a.test) continue;
-
-const qCount = a.test.sections.reduce(
-  (s, sec) => s + sec.questions.length,
-  0
-);
+        const qCount = a.test.sections.reduce((s, sec) => s + sec.questions.length, 0);
         const maxMarks = qCount * a.test.correctMarks;
         pctSum += maxMarks > 0 ? ((a.score || 0) / maxMarks) * 100 : 0;
         if (a.submittedAt) {
@@ -137,25 +133,14 @@ const qCount = a.test.sections.reduce(
       buckets.push({ label: bucketEnd.toLocaleDateString(undefined, { month: "short", day: "numeric" }), scores: [] });
     }
     for (const a of last30) {
-  if (!a.submittedAt) continue;
-  if (!a.test) continue;
-
-  const daysAgo = Math.floor(
-    (now.getTime() - a.submittedAt.getTime()) / (24 * 60 * 60 * 1000)
-  );
-
-  const bucketIdx = Math.min(4, Math.floor(daysAgo / 7));
-
-  const qCount = a.test.sections.reduce(
-    (s, sec) => s + sec.questions.length,
-    0
-  );
-
-  const maxMarks = qCount * a.test.correctMarks;
-  const pct = maxMarks > 0 ? ((a.score || 0) / maxMarks) * 100 : 0;
-
-  buckets[4 - bucketIdx].scores.push(pct);
-}
+      if (!a.submittedAt || !a.test) continue;
+      const daysAgo = Math.floor((now.getTime() - a.submittedAt.getTime()) / (24 * 60 * 60 * 1000));
+      const bucketIdx = Math.min(4, Math.floor(daysAgo / 7));
+      const qCount = a.test.sections.reduce((s, sec) => s + sec.questions.length, 0);
+      const maxMarks = qCount * a.test.correctMarks;
+      const pct = maxMarks > 0 ? ((a.score || 0) / maxMarks) * 100 : 0;
+      buckets[4 - bucketIdx].scores.push(pct);
+    }
     const weeklyTrend = buckets.map((b) => ({
       label: b.label,
       avgPct: b.scores.length > 0 ? b.scores.reduce((s, v) => s + v, 0) / b.scores.length : 0,
@@ -170,19 +155,14 @@ const qCount = a.test.sections.reduce(
 
     // Top performing students — by average score % across their submitted attempts
     const allSubmitted = await prisma.attempt.findMany({
-      where: { status: { in: ["SUBMITTED", "AUTO_SUBMITTED"] } },
+      where: { status: { in: ["SUBMITTED", "AUTO_SUBMITTED"] }, testId: { not: null } },
       include: { test: { include: { sections: { include: { questions: true } } } }, student: { select: { name: true } } },
     });
     const byStudent = new Map<string, { name: string; pcts: number[] }>();
     for (const a of allSubmitted) {
-  if (!a.test) continue;
-
-  const qCount = a.test.sections.reduce(
-    (s, sec) => s + sec.questions.length,
-    0
-  );
-
-  const maxMarks = qCount * a.test.correctMarks;
+      if (!a.test) continue;
+      const qCount = a.test.sections.reduce((s, sec) => s + sec.questions.length, 0);
+      const maxMarks = qCount * a.test.correctMarks;
       const pct = maxMarks > 0 ? ((a.score || 0) / maxMarks) * 100 : 0;
       const entry = byStudent.get(a.studentId) || { name: a.student.name, pcts: [] };
       entry.pcts.push(pct);
@@ -398,6 +378,7 @@ const qCount = a.test.sections.reduce(
             {/* Top Performing Students */}
             <div className="lg:col-span-4 card">
               <h2 className="text-lg font-bold text-slate-900 mb-4">Top Performing Students</h2>
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs text-slate-400 uppercase">
@@ -423,6 +404,7 @@ const qCount = a.test.sections.reduce(
                   )}
                 </tbody>
               </table>
+              </div>
             </div>
 
             {/* Recent Tests */}

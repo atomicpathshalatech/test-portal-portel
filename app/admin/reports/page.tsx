@@ -53,7 +53,7 @@ export default function ReportsDashboardPage() {
       <h1 className="text-2xl font-semibold text-slate-900 mb-2">Question Reports</h1>
       <p className="text-slate-500 text-sm mb-6">Issues reported by students, ready for teacher review and correction.</p>
 
-      <div className="flex gap-3 mb-4">
+      <div className="flex flex-wrap gap-3 mb-4">
         <select className="input max-w-[180px] text-sm" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">All Statuses</option>
           <option value="NEW">New</option>

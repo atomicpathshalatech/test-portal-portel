@@ -24,6 +24,7 @@ export default function DppPracticePage() {
   const [defaultLang, setDefaultLang] = useState<"hi" | "en">("en");
   const [langOverride, setLangOverride] = useState<"hi" | "en" | null>(null);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [flatQuestions, setFlatQuestions] = useState<Question[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
@@ -212,24 +213,24 @@ export default function DppPracticePage() {
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col">
       {/* Header bar */}
-      <div className="bg-white border-b px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-xs px-2 py-0.5 rounded-full bg-brand-light text-brand font-semibold">DPP Practice</span>
-          <div className="text-xs text-slate-600 leading-tight">
-            <div className="font-semibold">{dpp.name}</div>
+      <div className="bg-white border-b px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-brand-light text-brand font-semibold flex-shrink-0">DPP</span>
+          <div className="text-xs text-slate-600 leading-tight min-w-0">
+            <div className="font-semibold truncate max-w-[140px] sm:max-w-xs">{dpp.name}</div>
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
           {dpp.languageMode === "BOTH" && (
             <div className="relative">
               <div className="flex items-center rounded-full overflow-hidden shadow-md bg-gradient-to-r from-brand to-brand-dark">
                 <button
                   onClick={() => setLangMenuOpen((o) => !o)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-white text-sm font-medium"
+                  className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-white text-xs sm:text-sm font-medium whitespace-nowrap"
                 >
-                  <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs">🅰</span>
-                  {effectiveLang === "hi" ? "हिंदी" : "English"}
-                  {langOverride && <span className="text-[9px] bg-white/25 px-1.5 py-0.5 rounded-full ml-1">this Q only</span>}
+                  <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px] sm:text-xs">🅰</span>
+                  <span className="hidden xs:inline">{effectiveLang === "hi" ? "हिंदी" : "English"}</span>
+                  {langOverride && <span className="text-[8px] sm:text-[9px] bg-white/25 px-1 sm:px-1.5 py-0.5 rounded-full hidden sm:inline">this Q only</span>}
                   <span className="text-xs">▾</span>
                 </button>
               </div>
@@ -258,18 +259,25 @@ export default function DppPracticePage() {
             </div>
           )}
           <div className="text-right">
-            <div className="text-xs text-slate-500">Time Elapsed</div>
-            <div className="font-mono text-lg text-brand font-semibold leading-none">{formatTime(secondsElapsed)}</div>
+            <div className="text-[10px] sm:text-xs text-slate-500 whitespace-nowrap">Time Elapsed</div>
+            <div className="font-mono text-sm sm:text-lg text-brand font-semibold leading-none whitespace-nowrap">{formatTime(secondsElapsed)}</div>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         {/* Question area */}
-        <div className="flex-1 p-6 overflow-y-auto">
-          <div className="text-sm text-slate-500 mb-2 flex items-center justify-between">
-            <span>
-              Question {currentIdx + 1} of {flatQuestions.length} · [{currentQ.difficulty}]
+        <div className="flex-1 p-3 sm:p-6 overflow-y-auto pb-24 md:pb-6 min-w-0">
+          <div className="text-sm text-slate-500 mb-2 flex items-center justify-between gap-2">
+            <button
+              onClick={() => setPaletteOpen(true)}
+              className="md:hidden flex items-center gap-1 text-xs bg-white border rounded-full px-3 py-1.5 shadow-sm flex-shrink-0"
+            >
+              <span className="material-symbols-outlined text-sm">grid_view</span>
+              Palette
+            </button>
+            <span className="truncate">
+              Q{currentIdx + 1}/{flatQuestions.length} <span className="hidden xs:inline">· [{currentQ.difficulty}]</span>
             </span>
             <button
               onClick={toggleBookmark}
@@ -331,22 +339,22 @@ export default function DppPracticePage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3 mt-6">
-            <button onClick={saveAndNext} className="bg-success text-white px-4 py-2 rounded-lg font-medium text-sm">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 mt-6">
+            <button onClick={saveAndNext} className="bg-success text-white px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg font-medium text-sm">
               Save &amp; Next
             </button>
-            <button onClick={clearResponse} className="btn-secondary text-sm">
+            <button onClick={clearResponse} className="btn-secondary text-sm py-2.5 sm:py-2">
               Clear
             </button>
-            <button onClick={saveAndMarkStay} className="bg-warning text-white px-4 py-2 rounded-lg font-medium text-sm">
+            <button onClick={saveAndMarkStay} className="bg-warning text-white px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg font-medium text-sm">
               Save &amp; Mark for Review
             </button>
-            <button onClick={markForReview} className="bg-brand-dark text-white px-4 py-2 rounded-lg font-medium text-sm">
+            <button onClick={markForReview} className="bg-brand-dark text-white px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg font-medium text-sm">
               Mark for Review &amp; Next
             </button>
           </div>
 
-          <div className="flex items-center gap-3 mt-4 pt-4 border-t">
+          <div className="hidden md:flex items-center gap-3 mt-4 pt-4 border-t">
             <button onClick={() => goTo(currentIdx - 1)} className="btn-secondary text-sm" disabled={currentIdx === 0}>
               {"<< Back"}
             </button>
@@ -363,8 +371,39 @@ export default function DppPracticePage() {
           </div>
         </div>
 
-        {/* Palette */}
-        <div className="w-72 bg-white border-l p-4 overflow-y-auto">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t px-3 py-2 flex items-center gap-2 z-30 safe-area-bottom">
+          <button onClick={() => goTo(currentIdx - 1)} className="btn-secondary text-xs px-3 py-2" disabled={currentIdx === 0}>
+            ← Back
+          </button>
+          <button
+            onClick={() => goTo(currentIdx + 1)}
+            className="btn-secondary text-xs px-3 py-2"
+            disabled={currentIdx === flatQuestions.length - 1}
+          >
+            Next →
+          </button>
+          <button onClick={handleSubmit} className="ml-auto bg-danger text-white px-4 py-2 rounded-lg font-medium text-xs">
+            Submit
+          </button>
+        </div>
+
+        {/* Palette — static sidebar on desktop, bottom-sheet drawer on mobile */}
+        {paletteOpen && (
+          <div className="md:hidden fixed inset-0 bg-black/30 z-40" onClick={() => setPaletteOpen(false)} />
+        )}
+        <div
+          className={`bg-white overflow-y-auto z-50 transition-transform
+            md:static md:z-auto md:w-72 md:border-l md:translate-y-0 md:block md:p-4
+            fixed left-0 right-0 bottom-0 max-h-[75vh] rounded-t-2xl shadow-2xl p-4 pb-8
+            ${paletteOpen ? "translate-y-0" : "translate-y-full md:translate-y-0"}
+          `}
+        >
+          <div className="md:hidden flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold text-slate-700">Question Palette</span>
+            <button onClick={() => setPaletteOpen(false)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+              ✕
+            </button>
+          </div>
           <div className="border border-dashed rounded-lg p-3 mb-4 grid grid-cols-2 gap-2 text-xs">
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded bg-slate-200 text-slate-600 flex items-center justify-center font-semibold">
@@ -397,13 +436,16 @@ export default function DppPracticePage() {
               Answered &amp; Marked
             </div>
           </div>
-          <div className="text-sm font-semibold text-slate-700 mb-3">Question Palette</div>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="hidden md:block text-sm font-semibold text-slate-700 mb-3">Question Palette</div>
+          <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-5 gap-2">
             {flatQuestions.map((q, idx) => (
               <button
                 key={q.id}
-                onClick={() => goTo(idx)}
-                className={`w-10 h-10 rounded text-xs font-semibold ${stateColor[qState[q.id] || "NOT_VISITED"]} ${
+                onClick={() => {
+                  goTo(idx);
+                  setPaletteOpen(false);
+                }}
+                className={`w-full aspect-square min-h-[2.5rem] rounded text-xs font-semibold ${stateColor[qState[q.id] || "NOT_VISITED"]} ${
                   idx === currentIdx ? "ring-2 ring-brand-dark" : ""
                 }`}
               >

@@ -124,6 +124,7 @@ export default function UnifiedQuestionAuthoringPage() {
   const [savedSnapshot, setSavedSnapshot] = useState<string>("");
   const [activeLang, setActiveLang] = useState<"hi" | "en">("en");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [sectionSidebarOpen, setSectionSidebarOpen] = useState(false);
   const [metadataConfirmed, setMetadataConfirmed] = useState(false);
   const [pendingNav, setPendingNav] = useState<(() => void) | null>(null);
   const [saving, setSaving] = useState(false);
@@ -686,12 +687,21 @@ export default function UnifiedQuestionAuthoringPage() {
 
   return (
     <div className="fixed inset-0 flex bg-panel z-[100]">
-      {/* Persistent left sidebar */}
-      <aside className="w-64 bg-brand-dark text-white flex flex-col flex-shrink-0">
-        <div className="p-4 flex items-center gap-2">
+      {sectionSidebarOpen && (
+        <div className="md:hidden fixed inset-0 bg-black/40 z-40" onClick={() => setSectionSidebarOpen(false)} />
+      )}
+      {/* Persistent left sidebar — drawer on mobile, static on desktop */}
+      <aside
+        className={`w-64 bg-brand-dark text-white flex flex-col flex-shrink-0 fixed md:static top-0 left-0 h-full z-50 transition-transform duration-200
+          ${sectionSidebarOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
+      >
+        <div className="p-4 flex items-center justify-between gap-2">
           <Link href="/admin/tests" className="text-white/70 hover:text-white text-sm">
             ← Back
           </Link>
+          <button onClick={() => setSectionSidebarOpen(false)} className="md:hidden text-white/70 w-8 h-8 flex items-center justify-center">
+            <span className="material-symbols-outlined text-lg">close</span>
+          </button>
         </div>
         <div className="px-4 pb-2">
           <h2 className="font-semibold text-sm truncate">{test.name}</h2>
@@ -707,7 +717,10 @@ export default function UnifiedQuestionAuthoringPage() {
             return (
               <button
                 key={sec.id}
-                onClick={() => goToSlot(sec, Math.min(sec.questions.length + 1, Math.max(sec.targetCount, 1)))}
+                onClick={() => {
+                  goToSlot(sec, Math.min(sec.questions.length + 1, Math.max(sec.targetCount, 1)));
+                  setSectionSidebarOpen(false);
+                }}
                 disabled={showMetadataGate}
                 className={`w-full text-left px-3 py-2.5 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${active ? "bg-white/15" : "hover:bg-white/5"}`}
               >
@@ -727,43 +740,46 @@ export default function UnifiedQuestionAuthoringPage() {
       {/* Main column */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <div className="bg-white border-b px-6 py-3 flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <span className="font-semibold text-slate-800">{activeSection.name}</span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 uppercase font-medium">
+        <div className="bg-white border-b px-3 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <button onClick={() => setSectionSidebarOpen(true)} className="md:hidden w-8 h-8 flex items-center justify-center flex-shrink-0 -ml-1">
+              <span className="material-symbols-outlined text-slate-600">menu</span>
+            </button>
+            <span className="font-semibold text-slate-800 truncate max-w-[100px] sm:max-w-none">{activeSection.name}</span>
+            <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 uppercase font-medium whitespace-nowrap">
               {test.status.replace("_", " ")}
             </span>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 sm:gap-6">
             <div className="text-right">
-              <div className="text-xs text-slate-400">Section Progress</div>
+              <div className="text-[10px] sm:text-xs text-slate-400 hidden sm:block">Section Progress</div>
               <div className="flex items-center gap-2">
-                <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className="w-14 sm:w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                   <div className="h-full bg-brand" style={{ width: `${sectionPct}%` }} />
                 </div>
-                <span className="text-xs font-medium text-slate-600">{sectionAdded}/{activeSection.targetCount} · {sectionPct}%</span>
+                <span className="text-[10px] sm:text-xs font-medium text-slate-600 whitespace-nowrap">{sectionAdded}/{activeSection.targetCount}</span>
               </div>
             </div>
             {form.enableHi && form.enableEn && (
-              <span className="text-xs px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 font-medium">
+              <span className="text-xs px-3 py-1.5 rounded-full bg-slate-100 text-slate-500 font-medium hidden md:inline">
                 हिंदी + English — side by side
               </span>
             )}
-            <button onClick={() => setDrawerOpen(true)} className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center">
+            <button onClick={() => setDrawerOpen(true)} className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center flex-shrink-0">
               <span className="material-symbols-outlined text-slate-600 text-lg">tune</span>
             </button>
           </div>
         </div>
 
         {isDirty && (
-          <div className="bg-amber-500 text-white text-sm px-6 py-2 flex items-center gap-2 flex-shrink-0">
+          <div className="bg-amber-500 text-white text-xs sm:text-sm px-3 sm:px-6 py-2 flex items-center gap-2 flex-shrink-0">
             <span className="material-symbols-outlined text-sm">warning</span>
             You have unsaved changes. Save before navigating.
           </div>
         )}
 
         {/* Canvas */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6">
           {error && <div className="text-sm text-danger mb-3">{error}</div>}
 
           <div className="flex items-center justify-between mb-3">
@@ -1007,18 +1023,18 @@ export default function UnifiedQuestionAuthoringPage() {
         </div>
 
         {/* Bottom nav */}
-        <div className="bg-white border-t px-6 py-3 flex items-center justify-between flex-shrink-0">
+        <div className="bg-white border-t px-3 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
           <button
             onClick={() => guardedNavigate(() => goToSlot(activeSection, Math.max(1, activeSlot - 1)))}
             disabled={activeSlot <= 1 || showMetadataGate}
-            className="btn-secondary text-sm disabled:opacity-40"
+            className="btn-secondary text-xs sm:text-sm disabled:opacity-40 order-1"
           >
-            ← Previous
+            ← Prev
           </button>
-          <span className="text-sm text-slate-500">
+          <span className="text-xs sm:text-sm text-slate-500 order-3 sm:order-2 w-full sm:w-auto text-center sm:text-left">
             Question {activeSlot} / {activeSection.targetCount}
           </span>
-          <div className="flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-2 order-4">
             <span className="text-xs text-slate-400">Jump to</span>
             <input
               type="number"
@@ -1038,14 +1054,14 @@ export default function UnifiedQuestionAuthoringPage() {
               }}
             />
           </div>
-          <div className="flex gap-2">
-            <button onClick={handleSave} disabled={saving || !isDirty || showMetadataGate} className="btn-primary text-sm disabled:opacity-40">
-              {saving ? "Saving..." : isNewSlot ? "Save Question" : "Update Question"}
+          <div className="flex gap-2 order-2 sm:order-5">
+            <button onClick={handleSave} disabled={saving || !isDirty || showMetadataGate} className="btn-primary text-xs sm:text-sm disabled:opacity-40">
+              {saving ? "Saving..." : isNewSlot ? "Save" : "Update"}
             </button>
             <button
               onClick={() => guardedNavigate(() => goToSlot(activeSection, Math.min(activeSection.targetCount, activeSlot + 1)))}
               disabled={activeSlot >= activeSection.targetCount || showMetadataGate}
-              className="btn-secondary text-sm disabled:opacity-40"
+              className="btn-secondary text-xs sm:text-sm disabled:opacity-40"
             >
               Next →
             </button>
@@ -1177,7 +1193,7 @@ export default function UnifiedQuestionAuthoringPage() {
       {/* Metadata drawer */}
       {drawerOpen && (
         <div className="fixed inset-0 bg-black/20 z-40 flex justify-end" onClick={() => setDrawerOpen(false)}>
-          <div className="w-96 bg-white h-full p-6 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full sm:w-96 bg-white h-full p-6 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-semibold text-slate-900">Question Metadata</h3>
               <button onClick={() => setDrawerOpen(false)} className="text-slate-400">✕</button>

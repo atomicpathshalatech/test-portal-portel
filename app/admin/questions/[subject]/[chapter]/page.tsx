@@ -33,21 +33,21 @@ export default async function ChapterQuestionsPage({
       <Link href={`/admin/questions/${encodeURIComponent(subject)}`} className="text-sm text-brand mb-2 inline-block">
         ← {subject} Chapters
       </Link>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">{chapter}</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-slate-900">{chapter}</h1>
           <p className="text-slate-500 text-sm mt-1">{subject} · {questions.length} question(s)</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <a
             href={`/api/questions/export?format=xlsx&subject=${encodeURIComponent(subject)}&chapter=${encodeURIComponent(chapter)}`}
-            className="btn-secondary"
+            className="btn-secondary text-sm px-3 sm:px-5"
           >
             ⬇ Export
           </a>
           <Link
             href={`/admin/questions/new?subject=${encodeURIComponent(subject)}&chapter=${encodeURIComponent(chapter)}`}
-            className="btn-primary"
+            className="btn-primary text-sm px-3 sm:px-5"
           >
             + New Question
           </Link>

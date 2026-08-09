@@ -12,6 +12,8 @@ type TestData = {
   languageMode: "HINDI" | "ENGLISH" | "BOTH";
   durationMin: number;
   closeTime: string;
+  correctMarks: number;
+  incorrectMarks: number;
   sections: Section[];
 };
 
@@ -28,6 +30,7 @@ export default function ExamPage() {
   const [defaultLang, setDefaultLang] = useState<"hi" | "en">("en");
   const [langOverride, setLangOverride] = useState<"hi" | "en" | null>(null);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [instructionsAgreed, setInstructionsAgreed] = useState(false);
   const [flatQuestions, setFlatQuestions] = useState<Question[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -333,32 +336,51 @@ export default function ExamPage() {
   // ---- Stage 2: General Instructions ----
   if (stage === "instructions") {
     const isHi = defaultLang === "hi";
+    const hours = Math.floor(test.durationMin / 60);
+    const durationLabel = isHi
+      ? hours > 0 ? `${hours} घंटे` : `${test.durationMin} मिनट`
+      : hours > 0 ? `${hours} hours` : `${test.durationMin} minutes`;
+    const totalQuestions = flatQuestions.length;
     return (
       <div className="min-h-screen bg-slate-100 py-8 px-4">
         <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-8">
-          <h1 className="text-xl font-bold text-slate-900 mb-1 text-center">
-            {isHi ? "कृपया निम्नलिखित निर्देशों को ध्यान से पढ़ें" : "Please read the instructions carefully"}
+          <h1 className="text-lg font-bold text-slate-900 mb-4 text-center">
+            {isHi ? "महत्वपूर्ण निर्देश : Important Instructions" : "Important Instructions"}
           </h1>
-          <h2 className="text-sm font-bold text-slate-700 mt-6 mb-2 underline">
-            {isHi ? "सामान्य अनुदेश:" : "General Instructions:"}
-          </h2>
-          <ol className="list-decimal list-inside text-sm text-slate-600 space-y-2">
-            <li>{isHi ? `परीक्षा की कुल अवधि ${test.durationMin} मिनट है।` : `Total duration of this exam is ${test.durationMin} minutes.`}</li>
-            <li>{isHi ? "स्क्रीन के दाईं ओर प्रश्न पैलेट में प्रत्येक प्रश्न की स्थिति एक रंग/चिन्ह से दिखाई जाएगी — देखा नहीं गया, उत्तर नहीं दिया, उत्तर दिया, समीक्षा हेतु चिन्हित।" : "The Question Palette on the right shows each question's status using a color/symbol — Not Visited, Not Answered, Answered, Marked for Review."}</li>
-            <li>{isHi ? "किसी प्रश्न का उत्तर सुरक्षित करने के लिए Save & Next पर क्लिक करें।" : "Click Save & Next to save your answer and move to the next question."}</li>
-            <li>{isHi ? "उत्तर बदलने के लिए, दूसरा विकल्प चुनें और फिर से Save & Next दबाएँ।" : "To change your answer, select a different option and click Save & Next again."}</li>
-            <li>{isHi ? "किसी प्रश्न को समीक्षा हेतु चिन्हित करने के लिए Mark for Review & Next पर क्लिक करें।" : "Click Mark for Review & Next to flag a question for later review."}</li>
-            <li>{isHi ? "समय समाप्त होने पर परीक्षा स्वतः जमा हो जाएगी।" : "When the timer reaches zero, the exam will be submitted automatically."}</li>
-            {test.languageMode === "BOTH" && (
-              <li>{isHi ? "आप ऊपर दाईं ओर स्थित भाषा-बटन से किसी भी प्रश्न की भाषा अलग से बदल सकते हैं — अगला प्रश्न पुनः आपकी डिफ़ॉल्ट भाषा में दिखेगा।" : "You can switch the language for any individual question using the language button at the top-right — the next question will revert to your default language."}</li>
-            )}
+
+          <h2 className="text-sm font-bold text-slate-700 mb-2">महत्वपूर्ण निर्देश :</h2>
+          <ol className="list-decimal list-inside text-sm text-slate-600 space-y-2 mb-6">
+            <li>उत्तर पत्र इस परीक्षा पुस्तिका के अन्दर रखा है। जब आपको परीक्षा पुस्तिका खोलने को कहा जाए, तो उत्तर पत्र निकाल कर ध्यानपूर्वक मूल प्रति पर केवल नीले/काले बॉल पॉइंट पेन से विवरण भरें।</li>
+            <li>परीक्षा की अवधि {durationLabel} है एवं परीक्षा पुस्तिका में {totalQuestions} प्रश्न हैं। प्रत्येक प्रश्न {test.correctMarks} अंक का है। प्रत्येक सही उत्तर के लिए परीक्षार्थी को {test.correctMarks} अंक दिए जाएंगे। प्रत्येक गलत उत्तर के लिए कुल योग में से {Math.abs(test.incorrectMarks)} अंक घटाया जाएगा। अधिकतम अंक {totalQuestions * test.correctMarks} हैं।</li>
+            <li>इस पृष्ठ पर विवरण अंकित करने एवं उत्तर पत्र पर निशान लगाने के लिए केवल नीले/काले बॉल पॉइंट पेन का प्रयोग करें।</li>
+            <li>रफ कार्य इस परीक्षा पुस्तिका में निर्धारित स्थान पर ही करें।</li>
+            <li>परीक्षा समाप्त होने पर, परीक्षार्थी कक्ष/हॉल छोड़ने से पूर्व उत्तर पत्र (मूल प्रति एवं कार्यालय प्रति) कक्ष निरीक्षक को अवश्य सौंप दें। परीक्षार्थी अपने साथ प्रश्न पुस्तिका ले जा सकते हैं।</li>
           </ol>
 
-          <p className="text-xs text-danger font-medium mt-6 bg-red-50 rounded-lg px-3 py-2">
-            {isHi
-              ? "कृपया ध्यान दें: सभी प्रश्न आपकी डिफ़ॉल्ट भाषा में दिखाई देंगे। यह भाषा बाद में किसी विशेष प्रश्न के लिए बदली जा सकती है।"
-              : "Please note all questions will appear in your default language. This language can be changed for a particular question later on."}
-          </p>
+          <h2 className="text-sm font-bold text-slate-700 mb-2">Important Instructions :</h2>
+          <ol className="list-decimal list-inside text-sm text-slate-600 space-y-2">
+            <li>The Answer Sheet is inside this Test Booklet. When you are directed to open the Test Booklet, take out the Answer Sheet and fill in the particulars on the ORIGINAL Copy carefully with blue/black ball point pen only.</li>
+            <li>The test is of {durationLabel} duration and this Test Booklet contains {totalQuestions} questions. Each question carries {test.correctMarks} marks. For each correct response, the candidate will get {test.correctMarks} marks. For each incorrect response, {Math.abs(test.incorrectMarks)} mark{Math.abs(test.incorrectMarks) !== 1 ? "s" : ""} will be deducted from the total scores. The maximum marks are {totalQuestions * test.correctMarks}.</li>
+            <li>Use Blue/Black Ball Point Pen only for writing particulars on this page/marking responses on Answer Sheet.</li>
+            <li>Rough work is to be done in the space provided for this purpose in the Test Booklet only.</li>
+            <li>On completion of the test, the candidate must hand over the Answer Sheet (ORIGINAL and OFFICE Copy) to the Invigilator before leaving the Room/Hall. The candidates are allowed to take away this Test Booklet with them.</li>
+          </ol>
+
+          {test.languageMode === "BOTH" && (
+            <p className="text-xs text-slate-500 mt-4">
+              {isHi
+                ? "आप ऊपर दाईं ओर स्थित भाषा-बटन से किसी भी प्रश्न की भाषा अलग से बदल सकते हैं — अगला प्रश्न पुनः आपकी डिफ़ॉल्ट भाषा में दिखेगा।"
+                : "You can switch the language for any individual question using the language button at the top-right — the next question will revert to your default language."}
+            </p>
+          )}
+
+          <div className="text-xs text-danger font-medium mt-4 bg-red-50 rounded-lg px-3 py-2">
+            <strong>Translation Notice</strong>
+            <br />
+            किसी भी प्रश्न के अनुवाद में अस्पष्टता की स्थिति में, अंग्रेजी संस्करण को ही अंतिम माना जाएगा।
+            <br />
+            In case of any ambiguity in translation of any question, English version shall be treated as final.
+          </div>
 
           <label className="flex items-start gap-2 mt-6 text-sm text-slate-700">
             <input type="checkbox" className="mt-1" checked={instructionsAgreed} onChange={(e) => setInstructionsAgreed(e.target.checked)} />
@@ -404,27 +426,27 @@ export default function ExamPage() {
         <div className="bg-amber-500 text-white text-center py-2 text-sm font-medium">{warningMsg}</div>
       )}
       {/* Candidate header bar */}
-      <div className="bg-white border-b px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 flex-shrink-0">
-            <span className="text-lg">👤</span>
+      <div className="bg-white border-b px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 flex-shrink-0">
+            <span className="text-base sm:text-lg">👤</span>
           </div>
-          <div className="text-xs text-slate-600 leading-tight">
-            <div><span className="font-semibold">Candidate Name:</span> {candidateName || "—"}</div>
-            <div><span className="font-semibold">Exam Name:</span> {test.name}</div>
+          <div className="text-[11px] sm:text-xs text-slate-600 leading-tight min-w-0">
+            <div className="truncate max-w-[140px] sm:max-w-none"><span className="font-semibold">Candidate:</span> {candidateName || "—"}</div>
+            <div className="truncate max-w-[140px] sm:max-w-none hidden sm:block"><span className="font-semibold">Exam Name:</span> {test.name}</div>
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
           {test.languageMode === "BOTH" && (
             <div className="relative">
               <div className="flex items-center rounded-full overflow-hidden shadow-md bg-gradient-to-r from-brand to-brand-dark">
                 <button
                   onClick={() => setLangMenuOpen((o) => !o)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-white text-sm font-medium"
+                  className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-white text-xs sm:text-sm font-medium whitespace-nowrap"
                 >
-                  <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs">🅰</span>
-                  {effectiveLang === "hi" ? "हिंदी" : "English"}
-                  {langOverride && <span className="text-[9px] bg-white/25 px-1.5 py-0.5 rounded-full ml-1">this Q only</span>}
+                  <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px] sm:text-xs">🅰</span>
+                  <span className="hidden xs:inline">{effectiveLang === "hi" ? "हिंदी" : "English"}</span>
+                  {langOverride && <span className="text-[8px] sm:text-[9px] bg-white/25 px-1 sm:px-1.5 py-0.5 rounded-full hidden sm:inline">this Q only</span>}
                   <span className="text-xs">▾</span>
                 </button>
               </div>
@@ -457,7 +479,7 @@ export default function ExamPage() {
           )}
           {warningCount > 0 && (
             <div
-              className={`text-sm font-semibold px-2 py-1 rounded ${
+              className={`text-xs sm:text-sm font-semibold px-1.5 sm:px-2 py-1 rounded whitespace-nowrap ${
                 integrityScore >= 90
                   ? "bg-green-50 text-success"
                   : integrityScore >= 70
@@ -465,22 +487,29 @@ export default function ExamPage() {
                   : "bg-red-50 text-danger"
               }`}
             >
-              Integrity: {integrityScore}%
+              {integrityScore}%
             </div>
           )}
           <div className="text-right">
-            <div className="text-xs text-slate-500">Remaining Time</div>
-            <div className="font-mono text-lg text-danger font-semibold leading-none">{formatTime(secondsLeft)}</div>
+            <div className="text-[10px] sm:text-xs text-slate-500 whitespace-nowrap">Time Left</div>
+            <div className="font-mono text-sm sm:text-lg text-danger font-semibold leading-none whitespace-nowrap">{formatTime(secondsLeft)}</div>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
         {/* Question area */}
-        <div className="flex-1 p-6 overflow-y-auto">
-          <div className="text-sm text-slate-500 mb-2 flex items-center justify-between">
-            <span>
-              Question {currentIdx + 1} of {flatQuestions.length} · [{currentQ.difficulty}]
+        <div className="flex-1 p-3 sm:p-6 overflow-y-auto pb-24 md:pb-6 min-w-0">
+          <div className="text-sm text-slate-500 mb-2 flex items-center justify-between gap-2">
+            <button
+              onClick={() => setPaletteOpen(true)}
+              className="md:hidden flex items-center gap-1 text-xs bg-white border rounded-full px-3 py-1.5 shadow-sm flex-shrink-0"
+            >
+              <span className="material-symbols-outlined text-sm">grid_view</span>
+              Palette
+            </button>
+            <span className="truncate">
+              Q{currentIdx + 1}/{flatQuestions.length} <span className="hidden xs:inline">· [{currentQ.difficulty}]</span>
             </span>
             <button
               onClick={toggleBookmark}
@@ -542,22 +571,23 @@ export default function ExamPage() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-3 mt-6">
-            <button onClick={saveAndNext} className="bg-success text-white px-4 py-2 rounded-lg font-medium text-sm">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 mt-6">
+            <button onClick={saveAndNext} className="bg-success text-white px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg font-medium text-sm">
               Save &amp; Next
             </button>
-            <button onClick={clearResponse} className="btn-secondary text-sm">
+            <button onClick={clearResponse} className="btn-secondary text-sm py-2.5 sm:py-2">
               Clear
             </button>
-            <button onClick={saveAndMarkStay} className="bg-warning text-white px-4 py-2 rounded-lg font-medium text-sm">
+            <button onClick={saveAndMarkStay} className="bg-warning text-white px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg font-medium text-sm">
               Save &amp; Mark for Review
             </button>
-            <button onClick={markForReview} className="bg-brand-dark text-white px-4 py-2 rounded-lg font-medium text-sm">
+            <button onClick={markForReview} className="bg-brand-dark text-white px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg font-medium text-sm">
               Mark for Review &amp; Next
             </button>
           </div>
 
-          <div className="flex items-center gap-3 mt-4 pt-4 border-t">
+          {/* Previous/Next/Submit — sticky at the bottom on mobile so it's always reachable without scrolling */}
+          <div className="hidden md:flex items-center gap-3 mt-4 pt-4 border-t">
             <button onClick={() => goTo(currentIdx - 1)} className="btn-secondary text-sm" disabled={currentIdx === 0}>
               {"<< Back"}
             </button>
@@ -574,8 +604,40 @@ export default function ExamPage() {
           </div>
         </div>
 
-        {/* Palette */}
-        <div className="w-72 bg-white border-l p-4 overflow-y-auto">
+        {/* Mobile sticky bottom nav — always accessible, matches the desktop row above but fixed to viewport bottom */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t px-3 py-2 flex items-center gap-2 z-30 safe-area-bottom">
+          <button onClick={() => goTo(currentIdx - 1)} className="btn-secondary text-xs px-3 py-2" disabled={currentIdx === 0}>
+            ← Back
+          </button>
+          <button
+            onClick={() => goTo(currentIdx + 1)}
+            className="btn-secondary text-xs px-3 py-2"
+            disabled={currentIdx === flatQuestions.length - 1}
+          >
+            Next →
+          </button>
+          <button onClick={() => handleSubmit(false)} className="ml-auto bg-danger text-white px-4 py-2 rounded-lg font-medium text-xs">
+            Submit
+          </button>
+        </div>
+
+        {/* Palette — static sidebar on desktop, bottom-sheet drawer on mobile */}
+        {paletteOpen && (
+          <div className="md:hidden fixed inset-0 bg-black/30 z-40" onClick={() => setPaletteOpen(false)} />
+        )}
+        <div
+          className={`bg-white overflow-y-auto z-50 transition-transform
+            md:static md:z-auto md:w-72 md:border-l md:translate-y-0 md:block md:p-4
+            fixed left-0 right-0 bottom-0 max-h-[75vh] rounded-t-2xl shadow-2xl p-4 pb-8
+            ${paletteOpen ? "translate-y-0" : "translate-y-full md:translate-y-0"}
+          `}
+        >
+          <div className="md:hidden flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold text-slate-700">Question Palette</span>
+            <button onClick={() => setPaletteOpen(false)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500">
+              ✕
+            </button>
+          </div>
           <div className="border border-dashed rounded-lg p-3 mb-4 grid grid-cols-2 gap-2 text-xs">
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded bg-slate-200 text-slate-600 flex items-center justify-center font-semibold">
@@ -608,13 +670,16 @@ export default function ExamPage() {
               Answered &amp; Marked (considered for evaluation)
             </div>
           </div>
-          <div className="text-sm font-semibold text-slate-700 mb-3">Question Palette</div>
-          <div className="grid grid-cols-5 gap-2">
+          <div className="hidden md:block text-sm font-semibold text-slate-700 mb-3">Question Palette</div>
+          <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-5 gap-2">
             {flatQuestions.map((q, idx) => (
               <button
                 key={q.id}
-                onClick={() => goTo(idx)}
-                className={`w-10 h-10 rounded text-xs font-semibold ${stateColor[qState[q.id] || "NOT_VISITED"]} ${
+                onClick={() => {
+                  goTo(idx);
+                  setPaletteOpen(false);
+                }}
+                className={`w-full aspect-square min-h-[2.5rem] rounded text-xs font-semibold ${stateColor[qState[q.id] || "NOT_VISITED"]} ${
                   idx === currentIdx ? "ring-2 ring-brand-dark" : ""
                 }`}
               >

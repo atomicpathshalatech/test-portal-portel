@@ -12,11 +12,7 @@ export default async function RankTrackerPage() {
   const me = await prisma.user.findUnique({ where: { id: session.id } });
 
   const recentAttempts = await prisma.attempt.findMany({
-    where: {
-  studentId: session.id,
-  testId: { not: null },
-  status: { in: ["SUBMITTED", "AUTO_SUBMITTED"] },
-},
+    where: { studentId: session.id, status: { in: ["SUBMITTED", "AUTO_SUBMITTED"] }, testId: { not: null } },
     orderBy: { submittedAt: "desc" },
     take: 10,
     include: { test: { select: { name: true } } },
@@ -64,7 +60,7 @@ export default async function RankTrackerPage() {
     const x = trajectory.length > 1 ? (i / (trajectory.length - 1)) * W : 0;
     // Lower rank number = better, so invert the y-axis (rank 1 near the top)
     const y = maxRank > 0 ? ((a.rank || maxRank) / maxRank) * (H - 20) : H;
-    return { x, y, rank: a.rank, name: a.test?.name ?? "Test" };
+    return { x, y, rank: a.rank, name: a.test?.name || "—" };
   });
   const polylinePoints = coords.map((c) => `${c.x},${c.y}`).join(" ");
 
@@ -73,7 +69,7 @@ export default async function RankTrackerPage() {
       <div>
         <h1 className="text-3xl font-bold text-ink">Rank Tracker</h1>
         <p className="text-ink-soft mt-2">
-          Based on your most recent test: <span className="font-medium text-ink">{latest.test?.name ?? "Test"}</span>
+          Based on your most recent test: <span className="font-medium text-ink">{latest.test?.name || "—"}</span>
         </p>
       </div>
 
@@ -93,7 +89,7 @@ export default async function RankTrackerPage() {
               </span>
             )}
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 xs:grid-cols-3 gap-3 sm:gap-4">
             <div className="bg-surface p-4 rounded-xl border-l-2 border-brand/40">
               <div className="text-xs text-ink-soft mb-1">State Rank</div>
               <div className="text-xl font-bold text-ink">{stateGroup.rank ? `#${stateGroup.rank}` : "—"}</div>
@@ -139,7 +135,7 @@ export default async function RankTrackerPage() {
           </div>
           <div className="flex justify-between text-xs text-ink-soft mt-2">
             {trajectory.map((a, i) => (
-              <span key={i} className="truncate max-w-[80px]" title={a.test?.name ?? "Test"}>
+              <span key={i} className="truncate max-w-[80px]" title={a.test?.name || ""}>
                 {a.rank ? `#${a.rank}` : "—"}
               </span>
             ))}

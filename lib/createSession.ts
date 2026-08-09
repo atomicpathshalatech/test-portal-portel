@@ -5,15 +5,15 @@ import { parseUserAgent, computeDeviceHash } from "./deviceFingerprint";
 import type { AppRole } from "./permissions";
 
 export async function createUserSession(
-  user: { id: string; name: string; role: string },
+  user: { id: string; name: string; role: string; subject?: string | null },
   req: NextRequest,
   device?: { screenRes?: string; timezone?: string }
 ): Promise<string> {
   const userAgent = req.headers.get("user-agent") || "";
   const { browser, os, deviceType } = parseUserAgent(userAgent);
-  const screenRes = device?.screenRes;
-const timezone = device?.timezone;
-  const deviceHash = computeDeviceHash({ userAgent, screenRes, timezone });
+  const screenRes = device?.screenRes || null;
+  const timezone = device?.timezone || null;
+  const deviceHash = computeDeviceHash({ userAgent, screenRes: screenRes ?? undefined, timezone: timezone ?? undefined });
   const ipAddress = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
 
   const config =
@@ -47,5 +47,6 @@ const timezone = device?.timezone;
     name: user.name,
     role: user.role as AppRole,
     sessionId: session.id,
+    subject: user.subject ?? null,
   });
 }

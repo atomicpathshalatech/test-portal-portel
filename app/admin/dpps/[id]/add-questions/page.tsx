@@ -129,6 +129,8 @@ export default function DppAddQuestionsPage() {
   const [subTopicSuggestions, setSubTopicSuggestions] = useState<string[]>([]);
   const [extractingScreenshot, setExtractingScreenshot] = useState(false);
   const [extractingSolutionImage, setExtractingSolutionImage] = useState(false);
+  const [importByIdCode, setImportByIdCode] = useState("");
+  const [importingById, setImportingById] = useState(false);
   const [checkingTranslation, setCheckingTranslation] = useState(false);
   const [autoTranslating, setAutoTranslating] = useState(false);
   const [translationCheck, setTranslationCheck] = useState<{
@@ -558,6 +560,34 @@ export default function DppAddQuestionsPage() {
     }
   }
 
+  async function handleImportById() {
+    if (!importByIdCode.trim() || !dpp) return;
+    setImportingById(true);
+    setError("");
+    const res = await fetch(`/api/questions?code=${encodeURIComponent(importByIdCode.trim().toUpperCase())}`);
+    const found = await res.json();
+    if (!res.ok || !found || (Array.isArray(found) && found.length === 0)) {
+      setImportingById(false);
+      setError(`No question found with ID "${importByIdCode}".`);
+      return;
+    }
+    const question = Array.isArray(found) ? found[0] : found;
+    const addRes = await fetch(`/api/dpps/${dppId}/questions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ questionId: question.id }),
+    });
+    setImportingById(false);
+    if (!addRes.ok) {
+      const d = await addRes.json();
+      setError(d.message || "Failed to import question");
+      return;
+    }
+    setImportByIdCode("");
+    const fresh = await loadDpp();
+    guardedGoTo(fresh.questions.length);
+  }
+
   if (loading || !dpp) return <div className="text-center text-slate-400 py-10">Loading...</div>;
   if (!form) return null;
 
@@ -571,17 +601,17 @@ export default function DppAddQuestionsPage() {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-panel z-[100]">
-      <div className="bg-white border-b px-6 py-3 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <Link href="/admin/dpps" className="text-sm text-brand">← DPPs</Link>
-          <span className="font-semibold text-slate-800">{dpp.name}</span>
-          <span className="text-xs font-mono text-brand">{dpp.code}</span>
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${dpp.status === "PUBLISHED" ? "bg-green-100 text-success" : "bg-slate-100 text-slate-600"}`}>
+      <div className="bg-white border-b px-3 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <Link href="/admin/dpps" className="text-sm text-brand flex-shrink-0">← DPPs</Link>
+          <span className="font-semibold text-slate-800 truncate max-w-[100px] sm:max-w-none">{dpp.name}</span>
+          <span className="text-xs font-mono text-brand hidden sm:inline">{dpp.code}</span>
+          <span className={`text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${dpp.status === "PUBLISHED" ? "bg-green-100 text-success" : "bg-slate-100 text-slate-600"}`}>
             {dpp.status}
           </span>
         </div>
-        <div className="flex items-center gap-4">
-          <span className="text-xs text-slate-500">{added}/{target} questions</span>
+        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+          <span className="text-[10px] sm:text-xs text-slate-500 whitespace-nowrap">{added}/{target}</span>
           {dpp.status === "DRAFT" && (
             <button
               onClick={async () => {
@@ -590,25 +620,25 @@ export default function DppAddQuestionsPage() {
               }}
               disabled={added < target}
               title={added < target ? "Add all questions first" : ""}
-              className="btn-primary text-sm disabled:opacity-40"
+              className="btn-primary text-xs sm:text-sm disabled:opacity-40 px-2.5 sm:px-5"
             >
-              Publish DPP
+              Publish
             </button>
           )}
-          <button onClick={() => setDrawerOpen(true)} className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center">
+          <button onClick={() => setDrawerOpen(true)} className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center flex-shrink-0">
             <span className="material-symbols-outlined text-slate-600 text-lg">tune</span>
           </button>
         </div>
       </div>
 
       {isDirty && (
-        <div className="bg-amber-500 text-white text-sm px-6 py-2 flex items-center gap-2 flex-shrink-0">
-          <span className="material-symbols-outlined text-sm">warning</span>
+        <div className="bg-amber-500 text-white text-xs sm:text-sm px-3 sm:px-6 py-2 flex items-center gap-2 flex-shrink-0">
+          <span className="material-symbols-outlined text-sm flex-shrink-0">warning</span>
           You have unsaved changes. Save before navigating.
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-6">
         {error && <div className="text-sm text-danger mb-3">{error}</div>}
 
         <div className={showMetadataGate ? "pointer-events-none blur-sm select-none" : ""}>
@@ -722,6 +752,20 @@ export default function DppAddQuestionsPage() {
               {extractingSolutionImage ? "Reading image..." : "📷 Upload Solution Image"}
             </button>
           </div>
+
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-xs text-slate-500">🔗 Import by Question ID:</span>
+            <input
+              className="input text-sm max-w-[160px] py-1.5 font-mono uppercase"
+              placeholder="e.g. PH10025"
+              value={importByIdCode}
+              onChange={(e) => setImportByIdCode(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleImportById()}
+            />
+            <button onClick={handleImportById} disabled={importingById || !importByIdCode.trim()} className="btn-secondary text-xs disabled:opacity-40">
+              {importingById ? "Importing..." : "Add"}
+            </button>
+          </div>
           <div
             onPaste={(e) => {
               const items = e.clipboardData?.items;
@@ -758,11 +802,10 @@ export default function DppAddQuestionsPage() {
         </div>
       </div>
 
-      <div className="bg-white border-t px-6 py-3 flex items-center justify-between flex-shrink-0">
-        <button onClick={() => guardedGoTo(Math.max(1, slot - 1))} disabled={slot <= 1 || showMetadataGate} className="btn-secondary text-sm disabled:opacity-40">← Previous</button>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-slate-500">Question {slot} / {target}</span>
-          <span className="text-slate-300">·</span>
+      <div className="bg-white border-t px-3 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
+        <button onClick={() => guardedGoTo(Math.max(1, slot - 1))} disabled={slot <= 1 || showMetadataGate} className="btn-secondary text-xs sm:text-sm disabled:opacity-40 order-1">← Prev</button>
+        <span className="text-xs sm:text-sm text-slate-500 order-3 sm:order-2 w-full sm:w-auto text-center sm:text-left">Question {slot} / {target}</span>
+        <div className="hidden sm:flex items-center gap-2 order-4">
           <span className="text-xs text-slate-400">Jump to</span>
           <input
             type="number"
@@ -782,11 +825,11 @@ export default function DppAddQuestionsPage() {
             }}
           />
         </div>
-        <div className="flex gap-2">
-          <button onClick={handleSave} disabled={saving || !isDirty || showMetadataGate} className="btn-primary text-sm disabled:opacity-40">
-            {saving ? "Saving..." : isNewSlot ? "Save Question" : "Update Question"}
+        <div className="flex gap-2 order-2 sm:order-5">
+          <button onClick={handleSave} disabled={saving || !isDirty || showMetadataGate} className="btn-primary text-xs sm:text-sm disabled:opacity-40">
+            {saving ? "Saving..." : isNewSlot ? "Save" : "Update"}
           </button>
-          <button onClick={() => guardedGoTo(Math.min(target, slot + 1))} disabled={slot >= target || showMetadataGate} className="btn-secondary text-sm disabled:opacity-40">Next →</button>
+          <button onClick={() => guardedGoTo(Math.min(target, slot + 1))} disabled={slot >= target || showMetadataGate} className="btn-secondary text-xs sm:text-sm disabled:opacity-40">Next →</button>
         </div>
       </div>
 
@@ -841,7 +884,7 @@ export default function DppAddQuestionsPage() {
       {/* Metadata drawer (for existing questions) */}
       {drawerOpen && (
         <div className="fixed inset-0 bg-black/20 z-40 flex justify-end" onClick={() => setDrawerOpen(false)}>
-          <div className="w-96 bg-white h-full p-6 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full sm:w-96 bg-white h-full p-6 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-semibold text-slate-900">Question Metadata</h3>
               <button onClick={() => setDrawerOpen(false)} className="text-slate-400">✕</button>

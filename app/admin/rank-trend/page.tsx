@@ -1,7 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
 
-type Point = { id: string; category: string; marks: number; expectedRank: number; year: number };
+type Point = {
+  id: string;
+  category: string;
+  marks: number;
+  expectedRank: number;
+  year: number;
+  confidence?: string | null;
+  source?: string | null;
+};
 
 const CATEGORIES = ["General", "OBC", "SC", "ST", "EWS"];
 
@@ -62,6 +70,14 @@ export default function RankTrendAdminPage() {
         across the marks range, the more accurate the estimate. This is not an official NTA source; update
         it every year with the latest published cutoff/rank data.
       </p>
+      <div className="card bg-slate-50 text-xs text-slate-600 mb-6 max-w-2xl">
+        <strong>Bulk data note:</strong> 2026 Re-NEET official anchor points (marks 715 down to 38, sourced
+        directly from NTA's result notice) and previous-year AIQ Round-1 rank→college data are loaded via{" "}
+        <code>scripts/importNeetData.ts</code> — run <code>npx tsx scripts/importNeetData.ts</code> after
+        applying <code>prisma/migrations/manual/2026_college_predictor.sql</code> in Supabase's SQL Editor.
+        Points imported that way show an EXACT/DERIVED badge below; anything you add manually here has no
+        badge.
+      </div>
 
       <form onSubmit={handleSubmit} className="card grid grid-cols-2 md:grid-cols-5 gap-3 mb-6 items-end">
         <div>
@@ -118,21 +134,40 @@ export default function RankTrendAdminPage() {
             {g.points.length === 0 ? (
               <p className="text-slate-400 text-sm">No data points yet.</p>
             ) : (
+              <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-slate-500 border-b">
                     <th className="py-1">Marks</th>
                     <th className="py-1">Expected Rank</th>
                     <th className="py-1">Year</th>
+                    <th className="py-1">Source</th>
                     <th className="py-1"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {g.points.map((p) => (
-                    <tr key={p.id} className="border-b last:border-0">
+                    <tr key={p.id} className="border-b last:border-0" title={p.source || undefined}>
                       <td className="py-1">{p.marks}</td>
                       <td className="py-1">{p.expectedRank.toLocaleString()}</td>
                       <td className="py-1">{p.year}</td>
+                      <td className="py-1">
+                        {p.confidence ? (
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded ${
+                              p.confidence === "EXACT"
+                                ? "bg-green-100 text-green-700"
+                                : p.confidence === "DERIVED"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-slate-100 text-slate-600"
+                            }`}
+                          >
+                            {p.confidence}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-400">manual</span>
+                        )}
+                      </td>
                       <td className="py-1">
                         <button onClick={() => handleDelete(p.id)} className="text-danger text-xs">
                           Remove
@@ -142,6 +177,7 @@ export default function RankTrendAdminPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         ))}

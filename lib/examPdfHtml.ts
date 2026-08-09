@@ -30,7 +30,7 @@ function getKatexCss(): string {
 const BASE_STYLES = `
   * { box-sizing: border-box; }
   body {
-    font-family: 'Inter', 'Noto Sans Devanagari', sans-serif;
+    font-family: 'Noto Serif', 'Noto Serif Devanagari', 'Georgia', serif;
     color: #1e293b;
     font-size: 12.5px;
     line-height: 1.55;
@@ -76,30 +76,31 @@ function buildTestCoverPageHtml(opts: {
 
     <div class="cover-instructions">
       <div class="instructions-col">
-        <h3>महत्वपूर्ण निर्देश</h3>
+        <h3>महत्वपूर्ण निर्देश :</h3>
         <ol>
-          <li>यह पुस्तिका खोलने के लिए कहे जाने पर ही खोलें।</li>
-          <li>परीक्षा की अवधि ${durationMin} मिनट है और इसमें कुल ${totalQuestions} प्रश्न हैं।</li>
-          <li>प्रत्येक सही उत्तर के लिए +${correctMarks} अंक और प्रत्येक गलत उत्तर के लिए ${incorrectMarks} अंक दिए जाएंगे।</li>
-          <li>केवल नीले/काले बॉल पॉइंट पेन का प्रयोग करें।</li>
-          <li>रफ कार्य केवल निर्धारित स्थान पर ही करें।</li>
+          <li>उत्तर पत्र इस परीक्षा पुस्तिका के अन्दर रखा है। जब आपको परीक्षा पुस्तिका खोलने को कहा जाए, तो उत्तर पत्र निकाल कर ध्यानपूर्वक मूल प्रति पर केवल नीले/काले बॉल पॉइंट पेन से विवरण भरें।</li>
+          <li>परीक्षा की अवधि ${durationMin >= 60 ? `${Math.floor(durationMin / 60)} घंटे` : `${durationMin} मिनट`} है एवं परीक्षा पुस्तिका में ${totalQuestions} प्रश्न हैं। प्रत्येक प्रश्न ${correctMarks} अंक का है। प्रत्येक सही उत्तर के लिए परीक्षार्थी को ${correctMarks} अंक दिए जाएंगे। प्रत्येक गलत उत्तर के लिए कुल योग में से ${Math.abs(incorrectMarks)} अंक घटाया जाएगा। अधिकतम अंक ${totalQuestions * correctMarks} हैं।</li>
+          <li>इस पृष्ठ पर विवरण अंकित करने एवं उत्तर पत्र पर निशान लगाने के लिए केवल नीले/काले बॉल पॉइंट पेन का प्रयोग करें।</li>
+          <li>रफ कार्य इस परीक्षा पुस्तिका में निर्धारित स्थान पर ही करें।</li>
+          <li>परीक्षा समाप्त होने पर, परीक्षार्थी कक्ष/हॉल छोड़ने से पूर्व उत्तर पत्र (मूल प्रति एवं कार्यालय प्रति) कक्ष निरीक्षक को अवश्य सौंप दें। परीक्षार्थी अपने साथ प्रश्न पुस्तिका ले जा सकते हैं।</li>
         </ol>
       </div>
       <div class="instructions-col">
-        <h3>Important Instructions</h3>
+        <h3>Important Instructions :</h3>
         <ol>
-          <li>Do not open this booklet until instructed to do so.</li>
-          <li>The test duration is ${durationMin} minutes and contains ${totalQuestions} questions in total.</li>
-          <li>Each correct answer carries +${correctMarks} marks; each incorrect answer carries ${incorrectMarks} marks.</li>
-          <li>Use only a blue/black ball point pen.</li>
-          <li>Rough work should be done only in the space provided.</li>
+          <li>The Answer Sheet is inside this Test Booklet. When you are directed to open the Test Booklet, take out the Answer Sheet and fill in the particulars on the ORIGINAL Copy carefully with blue/black ball point pen only.</li>
+          <li>The test is of ${durationMin >= 60 ? `${Math.floor(durationMin / 60)} hours` : `${durationMin} minutes`} duration and this Test Booklet contains ${totalQuestions} questions. Each question carries ${correctMarks} marks. For each correct response, the candidate will get ${correctMarks} marks. For each incorrect response, ${Math.abs(incorrectMarks)} mark${Math.abs(incorrectMarks) !== 1 ? "s" : ""} will be deducted from the total scores. The maximum marks are ${totalQuestions * correctMarks}.</li>
+          <li>Use Blue/Black Ball Point Pen only for writing particulars on this page/marking responses on Answer Sheet.</li>
+          <li>Rough work is to be done in the space provided for this purpose in the Test Booklet only.</li>
+          <li>On completion of the test, the candidate must hand over the Answer Sheet (ORIGINAL and OFFICE Copy) to the Invigilator before leaving the Room/Hall. The candidates are allowed to take away this Test Booklet with them.</li>
         </ol>
       </div>
     </div>
 
     <div class="ambiguity-note">
-      In case of any ambiguity in translation of any question, the English version shall be treated as final.
-      किसी भी प्रश्न के अनुवाद में अस्पष्टता की स्थिति में, अंग्रेजी संस्करण को ही अंतिम माना जाएगा।
+      <strong>Translation Notice</strong><br/>
+      किसी भी प्रश्न के अनुवाद में अस्पष्टता की स्थिति में, अंग्रेजी संस्करण को ही अंतिम माना जाएगा।<br/>
+      In case of any ambiguity in translation of any question, English version shall be treated as final.
     </div>
 
     <table class="candidate-table">
@@ -419,7 +420,7 @@ function wrapHtmlDocument(bodyHtml: string, lang: string): string {
 <html lang="${lang}">
 <head>
 <meta charset="UTF-8" />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;500;600;700&family=Noto+Serif+Devanagari:wght@400;500;600;700&display=swap">
 <style>${katexCss}</style>
 <style>${BASE_STYLES}${SHARED_STYLES}</style>
 </head>

@@ -52,22 +52,22 @@ export default function AdminDppListPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Daily Practice Problems</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-slate-900">Daily Practice Problems</h1>
           <p className="text-slate-500 text-sm mt-1">Chapter-wise practice sets, reusing the same question engine as Tests.</p>
         </div>
-        <Link href="/admin/dpps/new" className="btn-primary">
+        <Link href="/admin/dpps/new" className="btn-primary text-sm px-3 sm:px-5">
           + Create DPP
         </Link>
       </div>
 
-      <div className="flex gap-3 mb-6">
-        <select className="input max-w-[180px] text-sm" value={subject} onChange={(e) => { setSubject(e.target.value); setChapter(""); }}>
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <select className="input sm:max-w-[180px] text-sm" value={subject} onChange={(e) => { setSubject(e.target.value); setChapter(""); }}>
           <option value="">All Subjects</option>
           {SUBJECTS.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
-        <select className="input max-w-[220px] text-sm" value={chapter} onChange={(e) => setChapter(e.target.value)} disabled={!subject}>
+        <select className="input sm:max-w-[220px] text-sm" value={chapter} onChange={(e) => setChapter(e.target.value)} disabled={!subject}>
           <option value="">All Chapters</option>
           {chapters.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>

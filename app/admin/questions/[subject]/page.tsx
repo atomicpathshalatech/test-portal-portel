@@ -31,16 +31,16 @@ export default async function ChapterListPage({ params }: { params: { subject: s
       <Link href="/admin/questions" className="text-sm text-brand mb-2 inline-block">
         ← All Subjects
       </Link>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-slate-900">{subject} — Chapters</h1>
-        <div className="flex gap-2">
-          <a href={`/api/questions/export?format=xlsx&subject=${encodeURIComponent(subject)}`} className="btn-secondary">
-            ⬇ Export Excel
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <h1 className="text-xl sm:text-2xl font-semibold text-slate-900">{subject} — Chapters</h1>
+        <div className="flex gap-2 flex-wrap">
+          <a href={`/api/questions/export?format=xlsx&subject=${encodeURIComponent(subject)}`} className="btn-secondary text-sm px-3 sm:px-5">
+            ⬇ Excel
           </a>
-          <a href={`/api/questions/export?format=csv&subject=${encodeURIComponent(subject)}`} className="btn-secondary">
-            ⬇ Export CSV
+          <a href={`/api/questions/export?format=csv&subject=${encodeURIComponent(subject)}`} className="btn-secondary text-sm px-3 sm:px-5">
+            ⬇ CSV
           </a>
-          <Link href={`/admin/questions/new?subject=${encodeURIComponent(subject)}`} className="btn-primary">
+          <Link href={`/admin/questions/new?subject=${encodeURIComponent(subject)}`} className="btn-primary text-sm px-3 sm:px-5">
             + New Question
           </Link>
         </div>

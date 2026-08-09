@@ -22,13 +22,13 @@ export default async function QuestionBankSubjectsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-slate-900">Question Bank</h1>
-        <div className="flex gap-2">
-          <Link href="/admin/questions/ai-generate" className="btn-secondary">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <h1 className="text-xl sm:text-2xl font-semibold text-slate-900">Question Bank</h1>
+        <div className="flex gap-2 flex-wrap">
+          <Link href="/admin/questions/ai-generate" className="btn-secondary text-sm px-3 sm:px-5">
             ✨ AI Generate
           </Link>
-          <Link href="/admin/questions/new" className="btn-primary">
+          <Link href="/admin/questions/new" className="btn-primary text-sm px-3 sm:px-5">
             + New Question
           </Link>
         </div>

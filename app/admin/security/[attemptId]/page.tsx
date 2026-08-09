@@ -12,9 +12,10 @@ export default async function AttemptTimelinePage({ params }: { params: { attemp
     },
   });
 
-  if (!attempt) {
+  if (!attempt || !attempt.test) {
     return <div className="text-slate-500">Attempt not found.</div>;
   }
+  const test = attempt.test;
 
   const band = integrityBand(attempt.integrityScore);
 
@@ -37,7 +38,7 @@ export default async function AttemptTimelinePage({ params }: { params: { attemp
       </Link>
       <h1 className="text-2xl font-semibold text-slate-900 mb-1">{attempt.student.name}</h1>
       <p className="text-slate-500 text-sm mb-6">
-        {attempt.student.email} · {attempt.test?.name ?? "DPP Attempt"}
+        {attempt.student.email} · {test.name}
       </p>
 
       <div className="card flex items-center justify-between mb-6">

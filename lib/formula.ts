@@ -7,7 +7,7 @@ type Segment = { type: "text" | "inline" | "block" | "image"; content: string };
 // ![](url) is a pasted image, matched before both.
 function parseSegments(input: string): Segment[] {
   const segments: Segment[] = [];
-  const regex = /!\[\]\(([\s\S]+?)\)|\$\$([\s\S]+?)\$\$|\$([\s\S]+?)\$/g;
+  const regex = /!\[\]\((.+?)\)|\$\$(.+?)\$\$|\$(.+?)\$/gs;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 

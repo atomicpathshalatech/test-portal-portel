@@ -71,7 +71,7 @@ export default async function SeriesDetailPage({ params }: { params: { id: strin
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 xs:grid-cols-3 gap-3 sm:gap-4 mb-6">
         <div className="card text-center">
           <div className="text-2xl font-bold text-brand">{series.tests.length}</div>
           <div className="text-xs text-slate-500 mt-1">Total Tests</div>

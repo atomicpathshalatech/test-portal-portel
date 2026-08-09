@@ -91,6 +91,7 @@ model User {
   notifications   Notification[]
   passwordHistory PasswordHistory[]
   loginAttempts   LoginAttempt[]
+  passwordResetTokens PasswordResetToken[]
 }
 
 // Every previous password hash, so a new password can be checked against
@@ -113,6 +114,17 @@ model LoginAttempt {
   ipAddress String?
   userId    String?
   user      User?    @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+// One-time, expiring token for the "forgot password" email link.
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
   createdAt DateTime @default(now())
 }
 
@@ -294,9 +306,42 @@ model RankTrendPoint {
   marks        Int
   expectedRank Int
   year         Int      @default(2026)
+  // Data-quality metadata (both optional/backward-compatible — existing
+  // manually-entered points from before this field existed are untouched
+  // and simply show no badge in the UI).
+  // confidence: "EXACT" (straight from an official NTA document) |
+  //             "DERIVED" (computed from official bucket/anchor data) |
+  //             "ESTIMATED" (manual admin guess / interpolation)
+  confidence   String?
+  source       String?  // free-text citation, e.g. "NTA Re-NEET 2026 Result Notice"
   createdAt    DateTime @default(now())
 
   @@unique([category, marks, year])
+}
+
+// Previous-year AIQ (All India Quota) Round-1 seat-allotment records — real
+// "at this NEET rank, this candidate got this college+course" outcomes,
+// sourced from MCC's official round-wise allotment result PDFs. Powers the
+// College Predictor (distinct from the Rank Predictor above, which only
+// estimates marks -> AIR, not which college a rank might realistically get).
+// One row per allotted seat. NOT official for the CURRENT year — this is
+// historical reference data ("what rank got what college last time"),
+// re-imported fresh every year once each round's result PDF is out.
+model CollegeAllotment {
+  id                 String @id @default(uuid())
+  year               Int
+  round              String  @default("Round 1") // e.g. "Round 1", "Round 2", "Mop-Up"
+  rank               Int
+  quota              String  // e.g. "Open Seat Quota", "All India", "Non-Resident Indian"
+  instituteName      String
+  course             String  // "MBBS" | "BDS" | "B.Sc Nursing" | "B.Sc. Nursing"
+  allottedCategory   String  // seat category, e.g. "Open", "OBC", "SC PwD"
+  candidateCategory  String  // candidate's own category, e.g. "General", "OBC"
+  remarks            String? // e.g. "NRI Priority : 2", "PwD"
+  createdAt          DateTime @default(now())
+
+  @@index([year, rank])
+  @@index([year, course, allottedCategory])
 }
 
 // One row per login — records a device "fingerprint" (browser/OS/screen/

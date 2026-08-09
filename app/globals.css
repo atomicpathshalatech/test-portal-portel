@@ -4,10 +4,19 @@
 
 html, body {
   height: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
   @apply bg-surface text-ink antialiased;
+}
+
+/* Any element that would otherwise force horizontal scroll (long unbroken
+   strings, wide tables not wrapped in a scroll-container, etc.) gets
+   clipped to the viewport instead of pushing the whole page wider. */
+img, table {
+  max-width: 100%;
 }
 
 /* Material Symbols icon font — required boilerplate for the icon font to render correctly */
@@ -45,4 +54,9 @@ body {
 
 .label {
   @apply block text-sm font-medium text-ink-soft mb-1;
+}
+
+/* Respects iPhone notch/home-indicator safe areas for fixed bottom bars */
+.safe-area-bottom {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
 }

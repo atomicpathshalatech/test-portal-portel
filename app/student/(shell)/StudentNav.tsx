@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/student/bookmarks", label: "Bookmarks", icon: "bookmark" },
   { href: "/student/ai-coach", label: "AI Coach", icon: "psychology" },
   { href: "/student/rank-predictor", label: "Rank Predictor", icon: "target" },
+  { href: "/profile", label: "My Profile", icon: "account_circle" },
 ];
 
 export default function StudentNav() {
