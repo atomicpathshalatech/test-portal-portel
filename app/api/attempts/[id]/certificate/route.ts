@@ -17,6 +17,12 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     include: { student: { select: { name: true } }, test: { select: { name: true, id: true } } },
   });
   if (!attempt) return NextResponse.json({ message: "Not found" }, { status: 404 });
+  if (!attempt.test) {
+  return NextResponse.json(
+    { message: "Certificate is only available for test attempts" },
+    { status: 400 }
+  );
+}
 
   const isOwner = attempt.studentId === session.id;
   if (!isOwner && !isAdminTier(session.role)) {

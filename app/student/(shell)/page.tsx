@@ -49,11 +49,19 @@ export default async function StudentDashboard() {
   let avgPercentage = 0;
   if (myAttempts.length > 0) {
     const percentages = myAttempts.map((a) => {
-      const test = allTests.find((t) => t.id === a.testId) || a.test;
-      const questionCount = test.sections?.reduce((s, sec) => s + sec.questions.length, 0) || 0;
-      const maxMarks = questionCount * test.correctMarks;
-      return maxMarks > 0 ? ((a.score || 0) / maxMarks) * 100 : 0;
-    });
+  const test = allTests.find((t) => t.id === a.testId);
+
+  if (!test) return 0;
+
+  const questionCount = test.sections.reduce(
+    (s, sec) => s + sec.questions.length,
+    0
+  );
+
+  const maxMarks = questionCount * test.correctMarks;
+
+  return maxMarks > 0 ? ((a.score || 0) / maxMarks) * 100 : 0;
+});
     avgPercentage = percentages.reduce((s, p) => s + p, 0) / percentages.length;
   }
 
@@ -251,7 +259,7 @@ export default async function StudentDashboard() {
                     href={`/student/result/${a.id}`}
                     className="block p-3 rounded-xl bg-surface hover:bg-surface-container transition-colors border border-surface-highest/40"
                   >
-                    <p className="text-sm font-semibold text-ink mb-0.5">{a.test.name}</p>
+                    <p className="text-sm font-semibold text-ink mb-0.5">{a.test?.name ?? "DPP Attempt"}</p>
                     <p className="text-xs text-ink-soft">Score: {a.score ?? "—"}</p>
                   </Link>
                 </div>

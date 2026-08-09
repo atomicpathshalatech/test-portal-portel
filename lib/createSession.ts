@@ -11,8 +11,8 @@ export async function createUserSession(
 ): Promise<string> {
   const userAgent = req.headers.get("user-agent") || "";
   const { browser, os, deviceType } = parseUserAgent(userAgent);
-  const screenRes = device?.screenRes || null;
-  const timezone = device?.timezone || null;
+  const screenRes = device?.screenRes;
+const timezone = device?.timezone;
   const deviceHash = computeDeviceHash({ userAgent, screenRes, timezone });
   const ipAddress = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
 

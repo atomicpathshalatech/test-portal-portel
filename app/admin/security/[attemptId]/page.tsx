@@ -37,7 +37,7 @@ export default async function AttemptTimelinePage({ params }: { params: { attemp
       </Link>
       <h1 className="text-2xl font-semibold text-slate-900 mb-1">{attempt.student.name}</h1>
       <p className="text-slate-500 text-sm mb-6">
-        {attempt.student.email} · {attempt.test.name}
+        {attempt.student.email} · {attempt.test?.name ?? "DPP Attempt"}
       </p>
 
       <div className="card flex items-center justify-between mb-6">

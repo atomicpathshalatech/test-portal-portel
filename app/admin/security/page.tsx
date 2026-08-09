@@ -50,7 +50,7 @@ export default async function SecurityCenterPage() {
                       <div className="font-medium text-slate-800">{a.student.name}</div>
                       <div className="text-xs text-slate-400">{a.student.email}</div>
                     </td>
-                    <td className="py-2 pr-4">{a.test.name}</td>
+                    <td className="py-2 pr-4">{a.test?.name ?? "DPP Attempt"}</td>
                     <td className="py-2 pr-4">{a.violations.length}</td>
                     <td className="py-2 pr-4">
                       <span className={`font-semibold ${band.color}`}>

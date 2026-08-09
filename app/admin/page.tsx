@@ -94,7 +94,12 @@ export default async function AdminDashboard() {
       let timeSum = 0;
       let timeCount = 0;
       for (const a of attempts) {
-        const qCount = a.test.sections.reduce((s, sec) => s + sec.questions.length, 0);
+        if (!a.test) continue;
+
+const qCount = a.test.sections.reduce(
+  (s, sec) => s + sec.questions.length,
+  0
+);
         const maxMarks = qCount * a.test.correctMarks;
         pctSum += maxMarks > 0 ? ((a.score || 0) / maxMarks) * 100 : 0;
         if (a.submittedAt) {
@@ -132,14 +137,25 @@ export default async function AdminDashboard() {
       buckets.push({ label: bucketEnd.toLocaleDateString(undefined, { month: "short", day: "numeric" }), scores: [] });
     }
     for (const a of last30) {
-      if (!a.submittedAt) continue;
-      const daysAgo = Math.floor((now.getTime() - a.submittedAt.getTime()) / (24 * 60 * 60 * 1000));
-      const bucketIdx = Math.min(4, Math.floor(daysAgo / 7));
-      const qCount = a.test.sections.reduce((s, sec) => s + sec.questions.length, 0);
-      const maxMarks = qCount * a.test.correctMarks;
-      const pct = maxMarks > 0 ? ((a.score || 0) / maxMarks) * 100 : 0;
-      buckets[4 - bucketIdx].scores.push(pct);
-    }
+  if (!a.submittedAt) continue;
+  if (!a.test) continue;
+
+  const daysAgo = Math.floor(
+    (now.getTime() - a.submittedAt.getTime()) / (24 * 60 * 60 * 1000)
+  );
+
+  const bucketIdx = Math.min(4, Math.floor(daysAgo / 7));
+
+  const qCount = a.test.sections.reduce(
+    (s, sec) => s + sec.questions.length,
+    0
+  );
+
+  const maxMarks = qCount * a.test.correctMarks;
+  const pct = maxMarks > 0 ? ((a.score || 0) / maxMarks) * 100 : 0;
+
+  buckets[4 - bucketIdx].scores.push(pct);
+}
     const weeklyTrend = buckets.map((b) => ({
       label: b.label,
       avgPct: b.scores.length > 0 ? b.scores.reduce((s, v) => s + v, 0) / b.scores.length : 0,
@@ -159,8 +175,14 @@ export default async function AdminDashboard() {
     });
     const byStudent = new Map<string, { name: string; pcts: number[] }>();
     for (const a of allSubmitted) {
-      const qCount = a.test.sections.reduce((s, sec) => s + sec.questions.length, 0);
-      const maxMarks = qCount * a.test.correctMarks;
+  if (!a.test) continue;
+
+  const qCount = a.test.sections.reduce(
+    (s, sec) => s + sec.questions.length,
+    0
+  );
+
+  const maxMarks = qCount * a.test.correctMarks;
       const pct = maxMarks > 0 ? ((a.score || 0) / maxMarks) * 100 : 0;
       const entry = byStudent.get(a.studentId) || { name: a.student.name, pcts: [] };
       entry.pcts.push(pct);

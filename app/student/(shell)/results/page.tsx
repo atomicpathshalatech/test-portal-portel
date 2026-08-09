@@ -6,17 +6,35 @@ export default async function ResultsHistoryPage() {
   const session = getSession()!;
 
   const attempts = await prisma.attempt.findMany({
-    where: { studentId: session.id, status: { in: ["SUBMITTED", "AUTO_SUBMITTED"] } },
+    where: {
+  studentId: session.id,
+  testId: { not: null },
+  status: { in: ["SUBMITTED", "AUTO_SUBMITTED"] },
+},
     include: { test: { include: { sections: { include: { questions: true } } } } },
     orderBy: { submittedAt: "asc" }, // ascending for the trend chart, we'll reverse for the table
   });
 
-  const points = attempts.map((a) => {
-    const questionCount = a.test.sections.reduce((s, sec) => s + sec.questions.length, 0);
+  const points = attempts
+  .map((a) => {
+    if (!a.test) return null;
+
+    const questionCount = a.test.sections.reduce(
+      (s, sec) => s + sec.questions.length,
+      0
+    );
+
     const maxMarks = questionCount * a.test.correctMarks;
     const pct = maxMarks > 0 ? ((a.score || 0) / maxMarks) * 100 : 0;
-    return { pct, score: a.score ?? 0, name: a.test.name, date: a.submittedAt };
-  });
+
+    return {
+      pct,
+      score: a.score ?? 0,
+      name: a.test.name,
+      date: a.submittedAt,
+    };
+  })
+  .filter((p): p is NonNullable<typeof p> => p !== null);
 
   const avgPct = points.length > 0 ? points.reduce((s, p) => s + p.pct, 0) / points.length : 0;
   const bestPct = points.length > 0 ? Math.max(...points.map((p) => p.pct)) : 0;
@@ -164,7 +182,9 @@ export default async function ResultsHistoryPage() {
                     <td className="p-4 text-sm text-ink-soft">
                       {a.submittedAt ? new Date(a.submittedAt).toLocaleDateString() : "—"}
                     </td>
-                    <td className="p-4 text-sm font-medium text-ink">{a.test.name}</td>
+                    <td className="p-4 text-sm font-medium text-ink">
+  {a.test?.name ?? "DPP Attempt"}
+</td>
                     <td className="p-4 text-right text-sm font-semibold">{a.score ?? "—"}</td>
                     <td className="p-4 text-right text-sm text-ink-soft">{a.rank ?? "—"}</td>
                     <td className="p-4 text-right">
