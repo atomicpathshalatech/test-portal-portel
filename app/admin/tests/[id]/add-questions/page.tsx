@@ -4,6 +4,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import FormulaEditor from "@/components/FormulaEditor";
 import FormulaText from "@/components/FormulaText";
+import Combobox from "@/components/Combobox";
 import { SYLLABUS } from "@/lib/syllabusData";
 
 type OptionRow = { id: string; text: string };
@@ -1017,6 +1018,26 @@ export default function UnifiedQuestionAuthoringPage() {
           <span className="text-sm text-slate-500">
             Question {activeSlot} / {activeSection.targetCount}
           </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400">Jump to</span>
+            <input
+              type="number"
+              min={1}
+              max={activeSection.targetCount}
+              disabled={showMetadataGate}
+              placeholder="#"
+              className="w-14 text-sm border border-slate-200 rounded-lg px-2 py-1 text-center disabled:opacity-40"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  const n = Number((e.target as HTMLInputElement).value);
+                  if (n >= 1 && n <= activeSection.targetCount) {
+                    guardedNavigate(() => goToSlot(activeSection, n));
+                    (e.target as HTMLInputElement).value = "";
+                  }
+                }
+              }}
+            />
+          </div>
           <div className="flex gap-2">
             <button onClick={handleSave} disabled={saving || !isDirty || showMetadataGate} className="btn-primary text-sm disabled:opacity-40">
               {saving ? "Saving..." : isNewSlot ? "Save Question" : "Update Question"}
@@ -1053,17 +1074,15 @@ export default function UnifiedQuestionAuthoringPage() {
             </select>
 
             <label className="label text-xs">Topic *</label>
-            <input
-              className="input mb-3"
-              list="gate-topic-options"
-              value={form.topic}
-              disabled={!form.chapter}
-              onChange={(e) => setForm({ ...form, topic: e.target.value, subTopic: "" })}
-              placeholder={form.chapter ? "E.g. Central Forces" : "Select chapter first"}
-            />
-            <datalist id="gate-topic-options">
-              {topics.map((t) => <option key={t} value={t} />)}
-            </datalist>
+            <div className="mb-3">
+              <Combobox
+                value={form.topic}
+                onChange={(v) => setForm({ ...form, topic: v, subTopic: "" })}
+                options={topics}
+                disabled={!form.chapter}
+                placeholder={form.chapter ? "Select or type a topic..." : "Select chapter first"}
+              />
+            </div>
 
             <label className="label text-xs">Sub Topic (optional)</label>
             <input
@@ -1174,16 +1193,9 @@ export default function UnifiedQuestionAuthoringPage() {
             </select>
 
             <label className="label text-xs">Topic</label>
-            <input
-              className="input mb-4"
-              list="topic-options"
-              value={form.topic}
-              onChange={(e) => setForm({ ...form, topic: e.target.value, subTopic: "" })}
-              placeholder="E.g. Central Forces"
-            />
-            <datalist id="topic-options">
-              {topics.map((t) => <option key={t} value={t} />)}
-            </datalist>
+            <div className="mb-4">
+              <Combobox value={form.topic} onChange={(v) => setForm({ ...form, topic: v, subTopic: "" })} options={topics} placeholder="Select or type a topic..." />
+            </div>
 
             <label className="label text-xs">Sub Topic</label>
             <input

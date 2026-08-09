@@ -1,107 +1,125 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { SYLLABUS } from "@/lib/syllabusData";
 import Combobox from "@/components/Combobox";
 import MultiSelect from "@/components/MultiSelect";
 import { DPP_LEVELS } from "@/lib/dppLevels";
 
-const SUBJECTS = ["Physics", "Chemistry", "Botany", "Zoology"];
 const FACULTY_PRESETS = ["By Firoz Sir", "By Yaman Sir", "By Sanu Yadav Sir", "By Mohsin Sir", "By Mukul Sir"];
 
-export default function NewDppPage() {
+type DppData = {
+  id: string;
+  code: string;
+  name: string;
+  subject: string;
+  chapter: string;
+  topics: string[];
+  facultyName: string | null;
+  difficulty: string;
+  level: number | null;
+  languageMode: string;
+  description: string | null;
+  tags: string | null;
+  instructions: string | null;
+  estimatedTimeMin: number;
+  correctMarks: number;
+  incorrectMarks: number;
+  questionTargetCount: number;
+  status: string;
+};
+
+export default function EditDppPage() {
+  const { id: dppId } = useParams<{ id: string }>();
   const router = useRouter();
-  const [form, setForm] = useState({
-    name: "",
-    subject: "Physics",
-    chapter: "",
-    topics: [] as string[],
-    facultyName: "",
-    difficulty: "MEDIUM",
-    level: 0,
-    languageMode: "BOTH",
-    description: "",
-    tags: "",
-    instructions: "",
-    estimatedTimeMin: 30,
-    correctMarks: 4,
-    incorrectMarks: -1,
-    negativeMarkingEnabled: true,
-    questionTargetCount: 10,
-  });
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [form, setForm] = useState<DppData | null>(null);
 
-  const chapters = Object.keys(SYLLABUS[form.subject] || {});
-  const topics = form.chapter ? SYLLABUS[form.subject]?.[form.chapter] || [] : [];
+  useEffect(() => {
+    fetch(`/api/dpps/${dppId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        setForm({ ...d, topics: d.topics || [] });
+        setLoading(false);
+      });
+  }, [dppId]);
+
+  const topics = form ? SYLLABUS[form.subject]?.[form.chapter] || [] : [];
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.chapter) {
-      setError("Chapter is required.");
-      return;
-    }
+    if (!form) return;
     setSaving(true);
     setError("");
-    const res = await fetch("/api/dpps", {
-      method: "POST",
+    const res = await fetch(`/api/dpps/${dppId}`, {
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, level: form.level || null }),
+      body: JSON.stringify({
+        name: form.name,
+        topics: form.topics,
+        facultyName: form.facultyName,
+        difficulty: form.difficulty,
+        level: form.level || null,
+        languageMode: form.languageMode,
+        description: form.description,
+        tags: form.tags,
+        instructions: form.instructions,
+        estimatedTimeMin: form.estimatedTimeMin,
+        correctMarks: form.correctMarks,
+        incorrectMarks: form.incorrectMarks,
+        questionTargetCount: form.questionTargetCount,
+      }),
     });
     setSaving(false);
     if (!res.ok) {
       const d = await res.json();
-      setError(d.message || "Failed to create DPP");
+      setError(d.message || "Failed to save");
       return;
     }
-    const created = await res.json();
-    router.push(`/admin/dpps/${created.id}/add-questions`);
+    router.push("/admin/dpps");
   }
+
+  if (loading || !form) return <div className="text-center text-slate-400 py-10">Loading...</div>;
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-semibold text-slate-900 mb-6">Create DPP</h1>
-      <p className="text-xs text-slate-400 mb-4">A unique code (e.g. AP0001) will be generated automatically.</p>
+      <Link href="/admin/dpps" className="text-sm text-brand mb-2 inline-block">← DPPs</Link>
+      <h1 className="text-2xl font-semibold text-slate-900 mb-1">Edit DPP</h1>
+      <p className="text-xs text-slate-400 mb-6">
+        <span className="font-mono text-brand">{form.code}</span> · Subject and Chapter are locked once created (questions are already tagged to them).
+      </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <div className="text-sm text-danger">{error}</div>}
 
         <div>
           <label className="label">DPP Name</label>
-          <input className="input" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Mole Concept — Basic Concepts" />
+          <input className="input" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="label">Subject</label>
-            <select className="input" value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value, chapter: "" })}>
-              {SUBJECTS.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+            <div className="input bg-slate-50 text-slate-500">{form.subject}</div>
           </div>
           <div>
             <label className="label">Chapter</label>
-            <select className="input" required value={form.chapter} onChange={(e) => setForm({ ...form, chapter: e.target.value, topics: [] })}>
-              <option value="">Select chapter...</option>
-              {chapters.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <div className="input bg-slate-50 text-slate-500">{form.chapter}</div>
           </div>
         </div>
 
         <div>
           <label className="label">Topics (optional — select all that this DPP covers)</label>
-          <MultiSelect
-            values={form.topics}
-            onChange={(v) => setForm({ ...form, topics: v })}
-            options={topics}
-            placeholder={form.chapter ? "Select topics..." : "Select chapter first"}
-            disabled={!form.chapter}
-          />
+          <MultiSelect values={form.topics} onChange={(v) => setForm({ ...form, topics: v })} options={topics} placeholder="Select topics..." />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="label">Faculty (display name)</label>
-            <Combobox value={form.facultyName} onChange={(v) => setForm({ ...form, facultyName: v })} options={FACULTY_PRESETS} placeholder="By Firoz Sir" />
+            <Combobox value={form.facultyName || ""} onChange={(v) => setForm({ ...form, facultyName: v })} options={FACULTY_PRESETS} placeholder="By Firoz Sir" />
           </div>
           <div>
             <label className="label">Language</label>
@@ -114,13 +132,13 @@ export default function NewDppPage() {
         </div>
 
         <div>
-          <label className="label">DPP Level (optional — defines the question style for this DPP)</label>
+          <label className="label">DPP Level</label>
           <div className="grid grid-cols-1 gap-2">
             {DPP_LEVELS.map((l) => (
               <button
                 key={l.level}
                 type="button"
-                onClick={() => setForm({ ...form, level: form.level === l.level ? 0 : l.level })}
+                onClick={() => setForm({ ...form, level: form.level === l.level ? null : l.level })}
                 className={`text-left px-4 py-3 rounded-xl border transition-all ${
                   form.level === l.level ? "border-brand bg-brand-light" : "border-slate-200 hover:border-brand/30"
                 }`}
@@ -168,9 +186,12 @@ export default function NewDppPage() {
           </div>
         </div>
 
-        <button type="submit" disabled={saving} className="btn-primary w-full">
-          {saving ? "Creating..." : "Create DPP & Add Questions →"}
-        </button>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => router.push("/admin/dpps")} className="btn-secondary flex-1">Cancel</button>
+          <button type="submit" disabled={saving} className="btn-primary flex-1">
+            {saving ? "Saving..." : "Save Changes"}
+          </button>
+        </div>
       </form>
     </div>
   );

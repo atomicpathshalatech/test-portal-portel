@@ -2,6 +2,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { SYLLABUS } from "@/lib/syllabusData";
+import DppActionsMenu from "@/components/DppActionsMenu";
+import { getDppLevel } from "@/lib/dppLevels";
 
 type DppRow = {
   id: string;
@@ -11,9 +13,11 @@ type DppRow = {
   chapter: string;
   status: string;
   difficulty: string;
+  level: number | null;
   questionTargetCount: number;
   createdBy: { name: string } | null;
   questions: { id: string }[];
+  attempts?: { id: string }[];
 };
 
 const SUBJECTS = ["Physics", "Chemistry", "Botany", "Zoology"];
@@ -82,20 +86,34 @@ export default function AdminDppListPage() {
               <div key={d.id} className="card hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between mb-2">
                   <span className="text-xs font-mono text-brand">{d.code}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${d.status === "PUBLISHED" ? "bg-green-100 text-success" : "bg-slate-100 text-slate-600"}`}>
-                    {d.status}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${d.status === "PUBLISHED" ? "bg-green-100 text-success" : "bg-slate-100 text-slate-600"}`}>
+                      {d.status}
+                    </span>
+                    <DppActionsMenu dppId={d.id} dppName={d.name} dppCode={d.code} status={d.status} hasAttempts={(d.attempts?.length || 0) > 0} onActionComplete={load} />
+                  </div>
                 </div>
                 <h3 className="font-semibold text-slate-900 mb-1">{d.name}</h3>
                 <p className="text-xs text-slate-500 mb-3">
                   {d.subject} · {d.chapter} · {d.difficulty}
+                  {d.level && <span className="ml-1 text-brand font-semibold">· L{d.level}</span>}
                 </p>
                 <div className="text-xs text-slate-400 mb-3">
                   {added}/{d.questionTargetCount} questions · by {d.createdBy?.name || "—"}
                 </div>
-                <Link href={`/admin/dpps/${d.id}/add-questions`} className="btn-secondary text-sm w-full text-center block">
+                <Link href={`/admin/dpps/${d.id}/add-questions`} className="btn-secondary text-sm w-full text-center block mb-2">
                   {added < d.questionTargetCount ? "Add Questions" : "Manage"}
                 </Link>
+                {d.status === "PUBLISHED" && (
+                  <div className="flex gap-2 text-xs">
+                    <a href={`/api/dpps/${d.id}/export-pdf`} className="text-brand underline flex-1 text-center">
+                      Without Solutions
+                    </a>
+                    <a href={`/api/dpps/${d.id}/export-pdf?withSolutions=true`} className="text-success underline flex-1 text-center">
+                      With Solutions
+                    </a>
+                  </div>
+                )}
               </div>
             );
           })

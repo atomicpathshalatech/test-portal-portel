@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { isAdminTier } from "@/lib/permissions";
-import { buildExamPdfHtml } from "@/lib/examPdfHtml";
+import { buildCombinedPdfHtml, buildTestCover, buildPdfFooterTemplate, buildPdfHeaderTemplate } from "@/lib/examPdfHtml";
 import { getBrowser } from "@/lib/pdfBrowser";
 
 export const runtime = "nodejs";
@@ -14,13 +14,11 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const mode = (req.nextUrl.searchParams.get("mode") === "solution" ? "solution" : "question") as
-    | "question"
-    | "solution";
-  // lang only matters for HINDI-only / ENGLISH-only tests; BOTH-mode tests
-  // always render bilingual side-by-side regardless of this param.
+  // One combined PDF per the export overhaul: Cover -> Questions -> [Answer
+  // Key -> Solutions] if withSolutions=true. Replaces the old separate
+  // Question-PDF / Solution-PDF pair.
+  const withSolutions = req.nextUrl.searchParams.get("withSolutions") === "true";
   const lang = (req.nextUrl.searchParams.get("lang") === "hi" ? "hi" : "en") as "hi" | "en";
-  const includeCoverPage = req.nextUrl.searchParams.get("cover") !== "false";
 
   const test = await prisma.test.findUnique({
     where: { id: params.id },
@@ -49,21 +47,28 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         statement: t.statement,
         options: t.options as any,
         correctOptionIds: t.correctOptionIds as any,
+        solution: t.solution,
       })),
     })),
   }));
 
-  const html = buildExamPdfHtml({
+  const totalQuestions = sections.reduce((sum, s) => sum + s.questions.length, 0);
+  const coverHtml = buildTestCover({
     testName: test.name,
     testCode: test.code,
-    sections,
-    lang,
-    mode,
+    durationMin: test.durationMin,
     correctMarks: test.correctMarks,
     incorrectMarks: test.incorrectMarks,
-    durationMin: test.durationMin,
+    totalQuestions,
     languageMode: test.languageMode,
-    includeCoverPage,
+  });
+
+  const html = buildCombinedPdfHtml({
+    coverHtml,
+    sections,
+    lang,
+    languageMode: test.languageMode,
+    withSolutions,
   });
 
   let browser;
@@ -74,15 +79,19 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     const pdfBuffer = await page.pdf({
       format: "A4",
       printBackground: true,
-      margin: { top: "20px", bottom: "20px", left: "16px", right: "16px" },
+      margin: { top: "20px", bottom: "48px", left: "16px", right: "16px" },
+      displayHeaderFooter: true,
+      headerTemplate: buildPdfHeaderTemplate(),
+      footerTemplate: buildPdfFooterTemplate(),
     });
     await browser.close();
 
     const langSuffix = test.languageMode === "BOTH" ? "hi-en" : lang;
+    const suffix = withSolutions ? "with-solutions" : "questions-only";
     return new NextResponse(pdfBuffer as any, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${test.code}-${mode}-${langSuffix}.pdf"`,
+        "Content-Disposition": `attachment; filename="${test.code}-${suffix}-${langSuffix}.pdf"`,
       },
     });
   } catch (err: any) {

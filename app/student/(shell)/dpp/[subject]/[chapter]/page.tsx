@@ -48,6 +48,9 @@ export default async function DppListPage({ params }: { params: { subject: strin
                 <span className="text-xs font-mono text-brand">{d.code}</span>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${DIFFICULTY_STYLE[d.difficulty]}`}>{d.difficulty}</span>
               </div>
+              {d.level && (
+                <div className="text-xs font-semibold text-brand mb-2">LEVEL {d.level}</div>
+              )}
               <h3 className="font-semibold text-ink mb-1">{d.name}</h3>
               {d.facultyName && <p className="text-xs text-ink-soft mb-3">{d.facultyName}</p>}
               <div className="flex items-center gap-3 text-xs text-ink-soft mb-4">
@@ -68,6 +71,9 @@ export default async function DppListPage({ params }: { params: { subject: strin
                   </Link>
                 )}
               </div>
+              <a href={`/api/dpps/${d.id}/export-pdf`} className="text-xs text-brand underline mt-2 inline-block">
+                📄 Export PDF
+              </a>
             </div>
           );
         })}

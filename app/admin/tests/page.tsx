@@ -91,31 +91,31 @@ export default async function AdminTestsPage({ searchParams }: { searchParams: {
                       <div className="flex flex-wrap gap-x-3 gap-y-1">
                         {isBoth && (
                           <>
-                            <a href={`/api/tests/${t.id}/export-pdf?mode=question`} className="text-xs text-brand underline">
-                              Question (HI+EN)
+                            <a href={`/api/tests/${t.id}/export-pdf`} className="text-xs text-brand underline">
+                              Export Without Solutions
                             </a>
-                            <a href={`/api/tests/${t.id}/export-pdf?mode=solution`} className="text-xs text-success underline">
-                              Solution (HI+EN)
+                            <a href={`/api/tests/${t.id}/export-pdf?withSolutions=true`} className="text-xs text-success underline">
+                              Export With Solutions
                             </a>
                           </>
                         )}
                         {isEn && (
                           <>
-                            <a href={`/api/tests/${t.id}/export-pdf?mode=question&lang=en`} className="text-xs text-brand underline">
-                              Question
+                            <a href={`/api/tests/${t.id}/export-pdf?lang=en`} className="text-xs text-brand underline">
+                              Export Without Solutions
                             </a>
-                            <a href={`/api/tests/${t.id}/export-pdf?mode=solution&lang=en`} className="text-xs text-success underline">
-                              Solution
+                            <a href={`/api/tests/${t.id}/export-pdf?lang=en&withSolutions=true`} className="text-xs text-success underline">
+                              Export With Solutions
                             </a>
                           </>
                         )}
                         {isHi && (
                           <>
-                            <a href={`/api/tests/${t.id}/export-pdf?mode=question&lang=hi`} className="text-xs text-brand underline">
-                              Question
+                            <a href={`/api/tests/${t.id}/export-pdf?lang=hi`} className="text-xs text-brand underline">
+                              Export Without Solutions
                             </a>
-                            <a href={`/api/tests/${t.id}/export-pdf?mode=solution&lang=hi`} className="text-xs text-success underline">
-                              Solution
+                            <a href={`/api/tests/${t.id}/export-pdf?lang=hi&withSolutions=true`} className="text-xs text-success underline">
+                              Export With Solutions
                             </a>
                           </>
                         )}

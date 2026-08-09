@@ -1,9 +1,9 @@
 "use client";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import FormulaEditor from "@/components/FormulaEditor";
-import FormulaText from "@/components/FormulaText";
+import Combobox from "@/components/Combobox";
 import { SYLLABUS } from "@/lib/syllabusData";
 
 type OptionRow = { id: string; text: string };
@@ -30,7 +30,7 @@ type DppData = {
   name: string;
   subject: string;
   chapter: string;
-  topic: string | null;
+  topics: string[];
   status: string;
   questionTargetCount: number;
   languageMode: "HINDI" | "ENGLISH" | "BOTH";
@@ -73,7 +73,7 @@ type FormState = {
 function blankForm(dpp: DppData): FormState {
   return {
     chapter: dpp.chapter,
-    topic: dpp.topic || "",
+    topic: dpp.topics[0] || "",
     subTopic: "",
     type: "SINGLE_CORRECT",
     difficulty: "MEDIUM",
@@ -125,6 +125,20 @@ export default function DppAddQuestionsPage() {
   const [aiSolving, setAiSolving] = useState(false);
   const [aiResult, setAiResult] = useState<{ correctOptionId: string | null; confidence: string } | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [metadataConfirmed, setMetadataConfirmed] = useState(false);
+  const [subTopicSuggestions, setSubTopicSuggestions] = useState<string[]>([]);
+  const [extractingScreenshot, setExtractingScreenshot] = useState(false);
+  const [extractingSolutionImage, setExtractingSolutionImage] = useState(false);
+  const [checkingTranslation, setCheckingTranslation] = useState(false);
+  const [autoTranslating, setAutoTranslating] = useState(false);
+  const [translationCheck, setTranslationCheck] = useState<{
+    verdict: string;
+    issues: string;
+    improvedHindiStatement?: string;
+    improvedHindiOptions?: OptionRow[];
+    improvedHindiSolution?: string;
+  } | null>(null);
+  const solutionImageInputRef = useRef<HTMLInputElement>(null);
 
   const loadDpp = useCallback(async () => {
     const res = await fetch(`/api/dpps/${dppId}`);
@@ -144,10 +158,42 @@ export default function DppAddQuestionsPage() {
     const next = link ? formFromQuestion(link) : blankForm(dpp);
     setForm(next);
     setSavedSnapshot(JSON.stringify(next));
+    setMetadataConfirmed(!!link);
   }, [dpp, slot]);
+
+  useEffect(() => {
+    if (!form?.topic) {
+      setSubTopicSuggestions([]);
+      return;
+    }
+    fetch(`/api/subtopics?topic=${encodeURIComponent(form.topic)}`)
+      .then((r) => r.json())
+      .then(setSubTopicSuggestions);
+  }, [form?.topic]);
 
   const isDirty = form ? JSON.stringify(form) !== savedSnapshot : false;
   const isIntegerType = form?.type === "INTEGER" || form?.type === "NUMERICAL";
+
+  useEffect(() => {
+    if (!form) return;
+    const shouldBeEmpty = isIntegerType;
+    const hiIsEmpty = form.hi.options.length === 0;
+    const enIsEmpty = form.en.options.length === 0;
+    if (shouldBeEmpty && (!hiIsEmpty || !enIsEmpty)) {
+      setForm({
+        ...form,
+        hi: { ...emptyIntegerLang(), statement: form.hi.statement, solution: form.hi.solution },
+        en: { ...emptyIntegerLang(), statement: form.en.statement, solution: form.en.solution },
+      });
+    } else if (!shouldBeEmpty && (hiIsEmpty || enIsEmpty)) {
+      setForm({
+        ...form,
+        hi: hiIsEmpty ? { ...emptyLang(), statement: form.hi.statement, solution: form.hi.solution } : form.hi,
+        en: enIsEmpty ? { ...emptyLang(), statement: form.en.statement, solution: form.en.solution } : form.en,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form?.type]);
 
   function guardedGoTo(newSlot: number) {
     const action = () => {
@@ -330,6 +376,188 @@ export default function DppAddQuestionsPage() {
     else setForm({ ...form, hi: { ...form.hi, correctOptionIds: [aiResult.correctOptionId] }, en: { ...form.en, correctOptionIds: [aiResult.correctOptionId] } });
   }
 
+  async function handleCheckTranslation() {
+    if (!form) return;
+    if (!form.hi.statement.trim() || !form.en.statement.trim()) {
+      setError("Fill in both Hindi and English statements first.");
+      return;
+    }
+    setCheckingTranslation(true);
+    setTranslationCheck(null);
+    const res = await fetch("/api/ai/check-translation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        hindiStatement: form.hi.statement,
+        englishStatement: form.en.statement,
+        hindiOptions: form.hi.options,
+        englishOptions: form.en.options,
+        hindiSolution: form.hi.solution,
+        englishSolution: form.en.solution,
+      }),
+    });
+    const data = await res.json();
+    setCheckingTranslation(false);
+    if (!res.ok) {
+      setError(data.message || "Translation check failed");
+      return;
+    }
+    setTranslationCheck({
+      verdict: data.verdict,
+      issues: data.issues || "",
+      improvedHindiStatement: data.improvedHindiStatement,
+      improvedHindiOptions: data.improvedHindiOptions,
+      improvedHindiSolution: data.improvedHindiSolution,
+    });
+  }
+
+  function applyImprovedHindi() {
+    if (!form || !translationCheck?.improvedHindiStatement) return;
+    setForm({
+      ...form,
+      hi: {
+        ...form.hi,
+        statement: translationCheck.improvedHindiStatement,
+        options: translationCheck.improvedHindiOptions || form.hi.options,
+        solution: translationCheck.improvedHindiSolution || form.hi.solution,
+      },
+    });
+    setTranslationCheck(null);
+  }
+
+  async function handleAutoTranslate() {
+    if (!form) return;
+    const sourceLang: "hi" | "en" = form.enableHi ? "hi" : "en";
+    const source = form[sourceLang];
+    if (!source.statement.trim()) {
+      setError("Write the question statement first.");
+      return;
+    }
+    setAutoTranslating(true);
+    setError("");
+    const res = await fetch("/api/ai/translate-question", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        subject: dpp?.subject,
+        sourceLang,
+        statement: source.statement,
+        options: isIntegerType ? undefined : source.options,
+        solution: source.solution,
+        isIntegerType,
+      }),
+    });
+    const data = await res.json();
+    setAutoTranslating(false);
+    if (!res.ok) {
+      setError(data.message || "Auto-translate failed");
+      return;
+    }
+    const targetLang: "hi" | "en" = sourceLang === "hi" ? "en" : "hi";
+    setForm({
+      ...form,
+      enableHi: true,
+      enableEn: true,
+      [targetLang]: {
+        statement: data.statement || "",
+        options: isIntegerType ? [] : data.options || source.options,
+        correctOptionIds: source.correctOptionIds,
+        solution: data.solution || "",
+      },
+    });
+  }
+
+  async function handleScreenshotPaste(e: React.ClipboardEvent<HTMLDivElement>) {
+    const items = e.clipboardData?.items;
+    if (!items || !form) return;
+    let file: File | null = null;
+    for (const item of Array.from(items)) {
+      if (item.type.startsWith("image/")) {
+        file = item.getAsFile();
+        break;
+      }
+    }
+    if (!file) return;
+    e.preventDefault();
+    setExtractingScreenshot(true);
+    setError("");
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file!);
+      });
+      const res = await fetch("/api/ai/extract-question", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: base64, mimeType: file.type }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message || "Couldn't extract a question from that screenshot.");
+        return;
+      }
+      const nextForm = { ...form };
+      if (data.isIntegerType) nextForm.type = "INTEGER";
+      if (data.statement_en) {
+        nextForm.en = {
+          statement: data.statement_en,
+          options: data.isIntegerType ? [] : data.options_en || form.en.options,
+          correctOptionIds: data.isIntegerType ? [""] : [],
+          solution: form.en.solution,
+        };
+        nextForm.enableEn = true;
+      }
+      if (data.statement_hi) {
+        nextForm.hi = {
+          statement: data.statement_hi,
+          options: data.isIntegerType ? [] : data.options_hi || form.hi.options,
+          correctOptionIds: data.isIntegerType ? [""] : [],
+          solution: form.hi.solution,
+        };
+        nextForm.enableHi = true;
+      }
+      setForm(nextForm);
+      if (data.hasImage) {
+        setError("⚠️ This screenshot appears to contain a diagram/figure — text was extracted, but please upload that image separately using the 🖼️ button in the statement box.");
+      }
+    } finally {
+      setExtractingScreenshot(false);
+    }
+  }
+
+  async function handleSolutionImageExtract(file: File) {
+    if (!form) return;
+    setExtractingSolutionImage(true);
+    setError("");
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const res = await fetch("/api/ai/extract-solution", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: base64, mimeType: file.type }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message || "Couldn't extract a solution from that image.");
+        return;
+      }
+      setForm({
+        ...form,
+        hi: { ...form.hi, solution: data.solution_hi || form.hi.solution },
+        en: { ...form.en, solution: data.solution_en || form.en.solution },
+      });
+    } finally {
+      setExtractingSolutionImage(false);
+    }
+  }
+
   if (loading || !dpp) return <div className="text-center text-slate-400 py-10">Loading...</div>;
   if (!form) return null;
 
@@ -338,6 +566,8 @@ export default function DppAddQuestionsPage() {
   const chapters = Object.keys(SYLLABUS[dpp.subject] || {});
   const topics = form.chapter ? SYLLABUS[dpp.subject]?.[form.chapter] || [] : [];
   const isNewSlot = !form.existingQuestionId;
+  const showMetadataGate = isNewSlot && !metadataConfirmed;
+  const canContinueMetadata = !!form.chapter;
 
   return (
     <div className="fixed inset-0 flex flex-col bg-panel z-[100]">
@@ -380,90 +610,235 @@ export default function DppAddQuestionsPage() {
 
       <div className="flex-1 overflow-y-auto p-6">
         {error && <div className="text-sm text-danger mb-3">{error}</div>}
-        <span className="text-xs text-slate-400 font-mono block mb-3">Q.{slot}</span>
 
-        {form.imageUrl && (
-          <div className="mb-4 relative inline-block">
-            <img src={form.imageUrl} alt="" className="max-h-48 rounded-lg border" />
-            <button onClick={() => setForm({ ...form, imageUrl: null })} className="absolute -top-2 -right-2 bg-danger text-white rounded-full w-6 h-6 text-xs">✕</button>
-          </div>
-        )}
-
-        <div className={`grid gap-4 mb-4 ${form.enableHi && form.enableEn ? "md:grid-cols-2" : "grid-cols-1"}`}>
-          {(["hi", "en"] as const)
-            .filter((lang) => (lang === "hi" ? form.enableHi : form.enableEn))
-            .map((lang) => {
-              const langData = form[lang];
-              return (
-                <div key={lang} className="flex flex-col gap-3">
-                  <span className={`text-xs font-bold px-2 py-1 rounded-full w-fit ${lang === "hi" ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"}`}>
-                    {lang === "hi" ? "हिंदी" : "English"}
-                  </span>
-                  <div className="card">
-                    <FormulaEditor value={langData.statement} onChange={(v) => updateStatementFor(lang, v)} rows={3} placeholder={lang === "hi" ? "प्रश्न यहाँ लिखें..." : "Enter question statement..."} />
-                  </div>
-                  {isIntegerType ? (
-                    <div className="card max-w-xs">
-                      <label className="label text-xs">Correct Value</label>
-                      <input className="input font-mono" value={langData.correctOptionIds[0] || ""} onChange={(e) => updateCorrectValueFor(e.target.value)} />
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-2">
-                      {langData.options.map((opt, idx) => {
-                        const isCorrect = langData.correctOptionIds.includes(opt.id);
-                        return (
-                          <div key={opt.id} className={`card relative ${isCorrect ? "border-2 border-success" : ""}`}>
-                            <div className="flex items-start gap-2">
-                              <button onClick={() => toggleCorrectFor(lang, opt.id)} className={`w-7 h-7 rounded-full text-xs font-semibold flex-shrink-0 flex items-center justify-center ${isCorrect ? "bg-success text-white" : "bg-slate-100 text-slate-500"}`}>
-                                {opt.id}
-                              </button>
-                              <div className="flex-1">
-                                <FormulaEditor value={opt.text} onChange={(v) => updateOptionFor(lang, idx, v)} rows={1} compact placeholder={`Option ${opt.id}`} />
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                  <div className="card">
-                    <label className="label text-xs font-medium">💡 Solution ({lang === "hi" ? "हिंदी" : "English"}) <span className="text-danger">*</span></label>
-                    <FormulaEditor value={langData.solution} onChange={(v) => setForm({ ...form, [lang]: { ...form[lang], solution: v } })} rows={2} placeholder="Required..." />
-                  </div>
-                </div>
-              );
-            })}
-        </div>
-
-        <button onClick={handleAiSolve} disabled={aiSolving} className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200 mb-4">
-          {aiSolving ? "Thinking..." : "✨ Solve with AI"}
-        </button>
-        {aiResult && (
-          <div className="text-xs rounded-lg px-3 py-2 mb-4 bg-purple-50 text-purple-700">
-            AI confidence: <strong>{aiResult.confidence}</strong>
-            {aiResult.correctOptionId && (
-              <>
-                {" "}· AI suggests <strong>{aiResult.correctOptionId}</strong>
-                {form.en.correctOptionIds[0] !== aiResult.correctOptionId && (
-                  <> — <button onClick={applyAiAnswer} className="underline font-medium">use AI's answer</button></>
-                )}
-              </>
+        <div className={showMetadataGate ? "pointer-events-none blur-sm select-none" : ""}>
+          <div
+            onPaste={handleScreenshotPaste}
+            tabIndex={0}
+            className="mb-4 border-2 border-dashed border-brand/30 rounded-xl p-4 text-center bg-brand-light/30 focus:outline-none focus:border-brand/60 cursor-text"
+          >
+            {extractingScreenshot ? (
+              <p className="text-sm text-brand font-medium">⏳ Reading question from screenshot...</p>
+            ) : (
+              <p className="text-sm text-ink-soft">📋 Click here and paste (Ctrl+V) a screenshot — statement &amp; options will auto-fill</p>
             )}
           </div>
-        )}
+
+          <span className="text-xs text-slate-400 font-mono block mb-3">Q.{slot}</span>
+
+          {form.imageUrl && (
+            <div className="mb-4 relative inline-block">
+              <img src={form.imageUrl} alt="" className="max-h-48 rounded-lg border" />
+              <button onClick={() => setForm({ ...form, imageUrl: null })} className="absolute -top-2 -right-2 bg-danger text-white rounded-full w-6 h-6 text-xs">✕</button>
+            </div>
+          )}
+
+          {form.enableHi !== form.enableEn ? (
+            <div className="flex items-center gap-2 mb-4">
+              <button onClick={handleAutoTranslate} disabled={autoTranslating} className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200">
+                {autoTranslating ? "Translating..." : `🌐 Auto-Translate to ${form.enableHi ? "English" : "Hindi"}`}
+              </button>
+            </div>
+          ) : form.enableHi && form.enableEn ? (
+            <div className="flex flex-col gap-2 mb-4">
+              <div className="flex items-center gap-2">
+                <button onClick={handleCheckTranslation} disabled={checkingTranslation} className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200">
+                  {checkingTranslation ? "Checking..." : "🔍 AI Check Hindi Translation"}
+                </button>
+                {translationCheck && (
+                  <span className={`text-xs px-3 py-1.5 rounded-full font-medium ${translationCheck.verdict === "ACCURATE" ? "bg-green-100 text-success" : translationCheck.verdict === "PARTIALLY_ACCURATE" ? "bg-amber-100 text-warning" : "bg-red-100 text-danger"}`}>
+                    {translationCheck.verdict.replace("_", " ")}{translationCheck.issues ? ` — ${translationCheck.issues}` : ""}
+                  </span>
+                )}
+              </div>
+              {translationCheck?.improvedHindiStatement && (
+                <button onClick={applyImprovedHindi} className="text-xs text-brand underline self-start">✓ Apply AI's improved Hindi (NCERT terminology)</button>
+              )}
+            </div>
+          ) : null}
+
+          <div className={`grid gap-4 mb-4 ${form.enableHi && form.enableEn ? "md:grid-cols-2" : "grid-cols-1"}`}>
+            {(["hi", "en"] as const)
+              .filter((lang) => (lang === "hi" ? form.enableHi : form.enableEn))
+              .map((lang) => {
+                const langData = form[lang];
+                return (
+                  <div key={lang} className="flex flex-col gap-3">
+                    <span className={`text-xs font-bold px-2 py-1 rounded-full w-fit ${lang === "hi" ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"}`}>
+                      {lang === "hi" ? "हिंदी" : "English"}
+                    </span>
+                    <div className="card">
+                      <FormulaEditor value={langData.statement} onChange={(v) => updateStatementFor(lang, v)} rows={3} placeholder={lang === "hi" ? "प्रश्न यहाँ लिखें..." : "Enter question statement..."} />
+                    </div>
+                    {isIntegerType ? (
+                      <div className="card max-w-xs">
+                        <label className="label text-xs">Correct Value</label>
+                        <input className="input font-mono" value={langData.correctOptionIds[0] || ""} onChange={(e) => updateCorrectValueFor(e.target.value)} />
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-2">
+                        {langData.options.map((opt, idx) => {
+                          const isCorrect = langData.correctOptionIds.includes(opt.id);
+                          return (
+                            <div key={opt.id} className={`card relative ${isCorrect ? "border-2 border-success" : ""}`}>
+                              <div className="flex items-start gap-2">
+                                <button onClick={() => toggleCorrectFor(lang, opt.id)} className={`w-7 h-7 rounded-full text-xs font-semibold flex-shrink-0 flex items-center justify-center ${isCorrect ? "bg-success text-white" : "bg-slate-100 text-slate-500"}`}>
+                                  {opt.id}
+                                </button>
+                                <div className="flex-1">
+                                  <FormulaEditor value={opt.text} onChange={(v) => updateOptionFor(lang, idx, v)} rows={1} compact placeholder={`Option ${opt.id}`} />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <div className="card">
+                      <label className="label text-xs font-medium">💡 Solution ({lang === "hi" ? "हिंदी" : "English"}) <span className="text-danger">*</span></label>
+                      <FormulaEditor value={langData.solution} onChange={(v) => setForm({ ...form, [lang]: { ...form[lang], solution: v } })} rows={2} placeholder="Required..." />
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <button onClick={handleAiSolve} disabled={aiSolving} className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200">
+              {aiSolving ? "Thinking..." : "✨ Solve with AI (fills solution in each enabled language)"}
+            </button>
+            <input
+              ref={solutionImageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleSolutionImageExtract(file);
+                e.target.value = "";
+              }}
+            />
+            <button onClick={() => solutionImageInputRef.current?.click()} disabled={extractingSolutionImage} className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200">
+              {extractingSolutionImage ? "Reading image..." : "📷 Upload Solution Image"}
+            </button>
+          </div>
+          <div
+            onPaste={(e) => {
+              const items = e.clipboardData?.items;
+              if (!items) return;
+              for (const item of Array.from(items)) {
+                if (item.type.startsWith("image/")) {
+                  e.preventDefault();
+                  const file = item.getAsFile();
+                  if (file) handleSolutionImageExtract(file);
+                  return;
+                }
+              }
+            }}
+            tabIndex={0}
+            className="mb-4 border border-dashed border-purple-200 rounded-lg px-3 py-2 text-center bg-purple-50/40 focus:outline-none focus:border-purple-400 cursor-text text-xs text-purple-600"
+          >
+            {extractingSolutionImage ? "⏳ Reading solution from image..." : "📋 Or click here and paste (Ctrl+V) a solution screenshot"}
+          </div>
+
+          {aiResult && (
+            <div className="text-xs rounded-lg px-3 py-2 mb-4 bg-purple-50 text-purple-700">
+              AI confidence: <strong>{aiResult.confidence}</strong>
+              {aiResult.correctOptionId && (
+                <>
+                  {" "}· AI suggests <strong>{aiResult.correctOptionId}</strong>
+                  {form.en.correctOptionIds[0] !== aiResult.correctOptionId && (
+                    <> — <button onClick={applyAiAnswer} className="underline font-medium">use AI's answer</button></>
+                  )}
+                </>
+              )}
+              <div className="mt-1 text-slate-500">⚠️ AI can make mistakes — always verify before publishing.</div>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="bg-white border-t px-6 py-3 flex items-center justify-between flex-shrink-0">
-        <button onClick={() => guardedGoTo(Math.max(1, slot - 1))} disabled={slot <= 1} className="btn-secondary text-sm disabled:opacity-40">← Previous</button>
-        <span className="text-sm text-slate-500">Question {slot} / {target}</span>
+        <button onClick={() => guardedGoTo(Math.max(1, slot - 1))} disabled={slot <= 1 || showMetadataGate} className="btn-secondary text-sm disabled:opacity-40">← Previous</button>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-slate-500">Question {slot} / {target}</span>
+          <span className="text-slate-300">·</span>
+          <span className="text-xs text-slate-400">Jump to</span>
+          <input
+            type="number"
+            min={1}
+            max={target}
+            disabled={showMetadataGate}
+            placeholder="#"
+            className="w-14 text-sm border border-slate-200 rounded-lg px-2 py-1 text-center disabled:opacity-40"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                const n = Number((e.target as HTMLInputElement).value);
+                if (n >= 1 && n <= target) {
+                  guardedGoTo(n);
+                  (e.target as HTMLInputElement).value = "";
+                }
+              }
+            }}
+          />
+        </div>
         <div className="flex gap-2">
-          <button onClick={handleSave} disabled={saving || !isDirty} className="btn-primary text-sm disabled:opacity-40">
+          <button onClick={handleSave} disabled={saving || !isDirty || showMetadataGate} className="btn-primary text-sm disabled:opacity-40">
             {saving ? "Saving..." : isNewSlot ? "Save Question" : "Update Question"}
           </button>
-          <button onClick={() => guardedGoTo(Math.min(target, slot + 1))} disabled={slot >= target} className="btn-secondary text-sm disabled:opacity-40">Next →</button>
+          <button onClick={() => guardedGoTo(Math.min(target, slot + 1))} disabled={slot >= target || showMetadataGate} className="btn-secondary text-sm disabled:opacity-40">Next →</button>
         </div>
       </div>
 
+      {/* Mandatory Metadata Popup — gates a brand-new question slot */}
+      {showMetadataGate && (
+        <div className="fixed inset-0 bg-black/40 z-[200] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+            <h3 className="font-semibold text-slate-900 mb-1">Question Metadata</h3>
+            <p className="text-xs text-slate-500 mb-4">Complete this before the question editor opens — DPP: <strong>{dpp.name}</strong> ({dpp.subject})</p>
+
+            <label className="label text-xs">Chapter *</label>
+            <select className="input mb-3" value={form.chapter} onChange={(e) => setForm({ ...form, chapter: e.target.value, topic: "", subTopic: "" })}>
+              <option value="">Select chapter...</option>
+              {chapters.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+
+            <label className="label text-xs">Topic</label>
+            <div className="mb-3">
+              <Combobox value={form.topic} onChange={(v) => setForm({ ...form, topic: v, subTopic: "" })} options={topics} placeholder="Select or type a topic..." />
+            </div>
+
+            <label className="label text-xs">Sub Topic (optional)</label>
+            <input className="input mb-3" list="gate-subtopic-opts" value={form.subTopic} onChange={(e) => setForm({ ...form, subTopic: e.target.value })} placeholder="E.g. Terminal Velocity" />
+            <datalist id="gate-subtopic-opts">{subTopicSuggestions.map((s) => <option key={s} value={s} />)}</datalist>
+
+            <label className="label text-xs">Question Type</label>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              {QUESTION_TYPES.map((t) => (
+                <button key={t.value} type="button" onClick={() => setForm({ ...form, type: t.value })} className={`text-xs px-3 py-2 rounded-lg border ${form.type === t.value ? "bg-brand text-white border-brand" : "border-slate-200 text-slate-600"}`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            <label className="label text-xs">Difficulty</label>
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              {["EASY", "MEDIUM", "HARD"].map((d) => (
+                <button key={d} type="button" onClick={() => setForm({ ...form, difficulty: d })} className={`text-xs px-3 py-2 rounded-lg border capitalize ${form.difficulty === d ? "bg-brand text-white border-brand" : "border-slate-200 text-slate-600"}`}>
+                  {d.toLowerCase()}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex gap-2">
+              <button type="button" onClick={() => router.push("/admin/dpps")} className="btn-secondary text-sm flex-1">Cancel</button>
+              <button type="button" onClick={() => setMetadataConfirmed(true)} disabled={!canContinueMetadata} className="btn-primary text-sm flex-1 disabled:opacity-40">Continue</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Metadata drawer (for existing questions) */}
       {drawerOpen && (
         <div className="fixed inset-0 bg-black/20 z-40 flex justify-end" onClick={() => setDrawerOpen(false)}>
           <div className="w-96 bg-white h-full p-6 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -472,12 +847,16 @@ export default function DppAddQuestionsPage() {
               <button onClick={() => setDrawerOpen(false)} className="text-slate-400">✕</button>
             </div>
             <label className="label text-xs">Chapter</label>
-            <select className="input mb-4" value={form.chapter} onChange={(e) => setForm({ ...form, chapter: e.target.value, topic: "" })}>
+            <select className="input mb-4" value={form.chapter} onChange={(e) => setForm({ ...form, chapter: e.target.value, topic: "", subTopic: "" })}>
               {chapters.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
             <label className="label text-xs">Topic</label>
-            <input className="input mb-4" list="topic-opts" value={form.topic} onChange={(e) => setForm({ ...form, topic: e.target.value })} />
-            <datalist id="topic-opts">{topics.map((t) => <option key={t} value={t} />)}</datalist>
+            <div className="mb-4">
+              <Combobox value={form.topic} onChange={(v) => setForm({ ...form, topic: v, subTopic: "" })} options={topics} placeholder="Select or type a topic..." />
+            </div>
+            <label className="label text-xs">Sub Topic (optional)</label>
+            <input className="input mb-4" list="subtopic-opts" value={form.subTopic} onChange={(e) => setForm({ ...form, subTopic: e.target.value })} />
+            <datalist id="subtopic-opts">{subTopicSuggestions.map((s) => <option key={s} value={s} />)}</datalist>
             <label className="label text-xs">Question Type</label>
             <div className="grid grid-cols-2 gap-2 mb-4">
               {QUESTION_TYPES.map((t) => (

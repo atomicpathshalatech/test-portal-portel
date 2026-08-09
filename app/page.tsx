@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -73,6 +74,12 @@ export default function LoginPage() {
           <button className="btn-primary w-full" disabled={loading}>
             {loading ? "Signing in..." : "Sign In"}
           </button>
+          <p className="text-center text-sm text-slate-500">
+            New student? <Link href="/register" className="text-brand font-medium">Create an account</Link>
+          </p>
+          <p className="text-center text-xs text-slate-400">
+            Entering an exam hall? <Link href="/test-login" className="text-brand font-medium">Use Test Login →</Link>
+          </p>
         </form>
         <p className="text-center text-xs text-slate-400 mt-4">
           Seed accounts: admin@atp.test / student@atp.test (password: <code>password123</code>)

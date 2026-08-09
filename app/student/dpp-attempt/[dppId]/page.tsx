@@ -21,7 +21,9 @@ export default function DppPracticePage() {
 
   const [dpp, setDpp] = useState<DppData | null>(null);
   const [attemptId, setAttemptId] = useState<string | null>(null);
-  const [lang, setLang] = useState<"hi" | "en">("en");
+  const [defaultLang, setDefaultLang] = useState<"hi" | "en">("en");
+  const [langOverride, setLangOverride] = useState<"hi" | "en" | null>(null);
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [flatQuestions, setFlatQuestions] = useState<Question[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
@@ -75,7 +77,7 @@ export default function DppPracticePage() {
       const dppRes = await fetch(`/api/dpps/${dppId}/for-exam`);
       const data: DppData = await dppRes.json();
       setDpp(data);
-      setLang(data.languageMode === "HINDI" ? "hi" : "en");
+      setDefaultLang(data.languageMode === "HINDI" ? "hi" : "en");
 
       const all = data.sections.flatMap((s) => s.questions);
       setFlatQuestions(all);
@@ -100,8 +102,15 @@ export default function DppPracticePage() {
   }
 
   const currentQ = flatQuestions[currentIdx];
+  const effectiveLang = langOverride || defaultLang;
   const currentTranslation =
-    currentQ?.translations.find((t) => t.language === lang) || currentQ?.translations[0];
+    currentQ?.translations.find((t) => t.language === effectiveLang) || currentQ?.translations[0];
+
+  // Per-question language override resets whenever navigating to a
+  // different question — the next question always shows in the default language.
+  useEffect(() => {
+    setLangOverride(null);
+  }, [currentIdx]);
 
   async function saveAnswer(questionId: string, selected: string[]) {
     setAnswers((prev) => ({ ...prev, [questionId]: selected }));
@@ -212,14 +221,41 @@ export default function DppPracticePage() {
         </div>
         <div className="flex items-center gap-4">
           {dpp.languageMode === "BOTH" && (
-            <select
-              className="border rounded px-2 py-1 text-sm"
-              value={lang}
-              onChange={(e) => setLang(e.target.value as "hi" | "en")}
-            >
-              <option value="en">English</option>
-              <option value="hi">हिंदी</option>
-            </select>
+            <div className="relative">
+              <div className="flex items-center rounded-full overflow-hidden shadow-md bg-gradient-to-r from-brand to-brand-dark">
+                <button
+                  onClick={() => setLangMenuOpen((o) => !o)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-white text-sm font-medium"
+                >
+                  <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs">🅰</span>
+                  {effectiveLang === "hi" ? "हिंदी" : "English"}
+                  {langOverride && <span className="text-[9px] bg-white/25 px-1.5 py-0.5 rounded-full ml-1">this Q only</span>}
+                  <span className="text-xs">▾</span>
+                </button>
+              </div>
+              {langMenuOpen && (
+                <div className="absolute right-0 mt-1.5 bg-white rounded-xl shadow-lg border py-1 w-40 z-20">
+                  <button
+                    onClick={() => {
+                      setLangOverride("en");
+                      setLangMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-brand-light ${effectiveLang === "en" ? "text-brand font-semibold" : "text-slate-700"}`}
+                  >
+                    English
+                  </button>
+                  <button
+                    onClick={() => {
+                      setLangOverride("hi");
+                      setLangMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-brand-light ${effectiveLang === "hi" ? "text-brand font-semibold" : "text-slate-700"}`}
+                  >
+                    हिंदी
+                  </button>
+                </div>
+              )}
+            </div>
           )}
           <div className="text-right">
             <div className="text-xs text-slate-500">Time Elapsed</div>

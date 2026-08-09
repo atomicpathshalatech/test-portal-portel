@@ -16,6 +16,7 @@ type TestData = {
 };
 
 type QState = "NOT_VISITED" | "NOT_ANSWERED" | "ANSWERED" | "MARKED" | "ANSWERED_MARKED";
+type Stage = "loading" | "language" | "instructions" | "exam";
 
 export default function ExamPage() {
   const { testId } = useParams<{ testId: string }>();
@@ -23,7 +24,11 @@ export default function ExamPage() {
 
   const [test, setTest] = useState<TestData | null>(null);
   const [attemptId, setAttemptId] = useState<string | null>(null);
-  const [lang, setLang] = useState<"hi" | "en">("en");
+  const [stage, setStage] = useState<Stage>("loading");
+  const [defaultLang, setDefaultLang] = useState<"hi" | "en">("en");
+  const [langOverride, setLangOverride] = useState<"hi" | "en" | null>(null);
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const [instructionsAgreed, setInstructionsAgreed] = useState(false);
   const [flatQuestions, setFlatQuestions] = useState<Question[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
@@ -86,7 +91,7 @@ export default function ExamPage() {
       const testRes = await fetch(`/api/tests/${testId}/for-exam`);
       const data: TestData = await testRes.json();
       setTest(data);
-      setLang(data.languageMode === "HINDI" ? "hi" : "en");
+      setDefaultLang(data.languageMode === "HINDI" ? "hi" : "en");
 
       const all = data.sections.flatMap((s) => s.questions);
       setFlatQuestions(all);
@@ -97,16 +102,29 @@ export default function ExamPage() {
 
       const durationSec = data.durationMin * 60;
       setSecondsLeft(durationSec);
+
+      // Bilingual tests let the student pick their default language first;
+      // single-language tests skip straight to the instructions screen.
+      setStage(data.languageMode === "BOTH" ? "language" : "instructions");
     })();
   }, [testId, router]);
 
-  // 2. Fullscreen on load
+  // Reset any per-question language override whenever the question changes —
+  // an override only ever applies to the question it was made on; the next
+  // question always starts back on the student's chosen default language.
   useEffect(() => {
+    setLangOverride(null);
+  }, [currentIdx]);
+
+  // Fullscreen only once the student has actually entered the exam (not
+  // during the language-choice / instructions screens).
+  useEffect(() => {
+    if (stage !== "exam") return;
     const el = containerRef.current;
     if (el && el.requestFullscreen) {
       el.requestFullscreen().catch(() => {});
     }
-  }, [test]);
+  }, [stage]);
 
   const logViolation = useCallback(
     async (type: string, message: string) => {
@@ -131,6 +149,7 @@ export default function ExamPage() {
 
   // 3. Violation detection: tab switch / window blur / fullscreen exit
   useEffect(() => {
+    if (stage !== "exam") return;
     function onVisibility() {
       if (document.hidden) logViolation("TAB_SWITCH", "You left the examination screen. Please return immediately.");
     }
@@ -143,11 +162,11 @@ export default function ExamPage() {
       document.removeEventListener("visibilitychange", onVisibility);
       document.removeEventListener("fullscreenchange", onFullscreenChange);
     };
-  }, [logViolation]);
+  }, [logViolation, stage]);
 
-  // 4. Timer
+  // 4. Timer — only counts down once the student has actually entered the exam
   useEffect(() => {
-    if (secondsLeft <= 0) return;
+    if (stage !== "exam" || secondsLeft <= 0) return;
     const t = setInterval(() => {
       setSecondsLeft((s) => {
         if (s <= 1) {
@@ -159,7 +178,7 @@ export default function ExamPage() {
       });
     }, 1000);
     return () => clearInterval(t);
-  }, [secondsLeft > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [secondsLeft > 0, stage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function formatTime(s: number) {
     const h = Math.floor(s / 3600).toString().padStart(2, "0");
@@ -186,8 +205,9 @@ export default function ExamPage() {
   }, [router]);
 
   const currentQ = flatQuestions[currentIdx];
+  const effectiveLang = langOverride || defaultLang;
   const currentTranslation =
-    currentQ?.translations.find((t) => t.language === lang) || currentQ?.translations[0];
+    currentQ?.translations.find((t) => t.language === effectiveLang) || currentQ?.translations[0];
 
   async function saveAnswer(questionId: string, selected: string[]) {
     setAnswers((prev) => ({ ...prev, [questionId]: selected }));
@@ -270,8 +290,95 @@ export default function ExamPage() {
     router.push(`/student/result/${attemptId}`);
   }
 
-  if (!test || !currentQ) {
+  if (!test || !currentQ || stage === "loading") {
     return <div className="min-h-screen flex items-center justify-center text-slate-500">Loading exam...</div>;
+  }
+
+  // ---- Stage 1: Choose Default Language (bilingual tests only) ----
+  if (stage === "language") {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-lg max-w-sm w-full p-8 text-center">
+          <h1 className="text-lg font-bold text-slate-900 mb-1">Choose Your Default Language</h1>
+          <p className="text-xs text-slate-500 mb-6">
+            अपनी डिफ़ॉल्ट भाषा चुनें। आप परीक्षा के दौरान किसी भी प्रश्न की भाषा अलग से बदल सकते हैं।
+            <br />
+            You can still switch language for individual questions during the exam.
+          </p>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => {
+                setDefaultLang("en");
+                setStage("instructions");
+              }}
+              className="border-2 border-brand text-brand font-semibold py-3 rounded-xl hover:bg-brand-light transition-colors"
+            >
+              English
+            </button>
+            <button
+              onClick={() => {
+                setDefaultLang("hi");
+                setStage("instructions");
+              }}
+              className="border-2 border-brand text-brand font-semibold py-3 rounded-xl hover:bg-brand-light transition-colors"
+            >
+              हिंदी (Hindi)
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---- Stage 2: General Instructions ----
+  if (stage === "instructions") {
+    const isHi = defaultLang === "hi";
+    return (
+      <div className="min-h-screen bg-slate-100 py-8 px-4">
+        <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg p-8">
+          <h1 className="text-xl font-bold text-slate-900 mb-1 text-center">
+            {isHi ? "कृपया निम्नलिखित निर्देशों को ध्यान से पढ़ें" : "Please read the instructions carefully"}
+          </h1>
+          <h2 className="text-sm font-bold text-slate-700 mt-6 mb-2 underline">
+            {isHi ? "सामान्य अनुदेश:" : "General Instructions:"}
+          </h2>
+          <ol className="list-decimal list-inside text-sm text-slate-600 space-y-2">
+            <li>{isHi ? `परीक्षा की कुल अवधि ${test.durationMin} मिनट है।` : `Total duration of this exam is ${test.durationMin} minutes.`}</li>
+            <li>{isHi ? "स्क्रीन के दाईं ओर प्रश्न पैलेट में प्रत्येक प्रश्न की स्थिति एक रंग/चिन्ह से दिखाई जाएगी — देखा नहीं गया, उत्तर नहीं दिया, उत्तर दिया, समीक्षा हेतु चिन्हित।" : "The Question Palette on the right shows each question's status using a color/symbol — Not Visited, Not Answered, Answered, Marked for Review."}</li>
+            <li>{isHi ? "किसी प्रश्न का उत्तर सुरक्षित करने के लिए Save & Next पर क्लिक करें।" : "Click Save & Next to save your answer and move to the next question."}</li>
+            <li>{isHi ? "उत्तर बदलने के लिए, दूसरा विकल्प चुनें और फिर से Save & Next दबाएँ।" : "To change your answer, select a different option and click Save & Next again."}</li>
+            <li>{isHi ? "किसी प्रश्न को समीक्षा हेतु चिन्हित करने के लिए Mark for Review & Next पर क्लिक करें।" : "Click Mark for Review & Next to flag a question for later review."}</li>
+            <li>{isHi ? "समय समाप्त होने पर परीक्षा स्वतः जमा हो जाएगी।" : "When the timer reaches zero, the exam will be submitted automatically."}</li>
+            {test.languageMode === "BOTH" && (
+              <li>{isHi ? "आप ऊपर दाईं ओर स्थित भाषा-बटन से किसी भी प्रश्न की भाषा अलग से बदल सकते हैं — अगला प्रश्न पुनः आपकी डिफ़ॉल्ट भाषा में दिखेगा।" : "You can switch the language for any individual question using the language button at the top-right — the next question will revert to your default language."}</li>
+            )}
+          </ol>
+
+          <p className="text-xs text-danger font-medium mt-6 bg-red-50 rounded-lg px-3 py-2">
+            {isHi
+              ? "कृपया ध्यान दें: सभी प्रश्न आपकी डिफ़ॉल्ट भाषा में दिखाई देंगे। यह भाषा बाद में किसी विशेष प्रश्न के लिए बदली जा सकती है।"
+              : "Please note all questions will appear in your default language. This language can be changed for a particular question later on."}
+          </p>
+
+          <label className="flex items-start gap-2 mt-6 text-sm text-slate-700">
+            <input type="checkbox" className="mt-1" checked={instructionsAgreed} onChange={(e) => setInstructionsAgreed(e.target.checked)} />
+            <span>
+              {isHi
+                ? "मैंने उपरोक्त सभी निर्देशों को पढ़ और समझ लिया है। मैं सहमत हूं कि निर्देशों का पालन न करने की स्थिति में अनुशासनात्मक कार्रवाई हो सकती है।"
+                : "I have read and understood the instructions above. I agree that failure to adhere to them may result in disciplinary action."}
+            </span>
+          </label>
+
+          <button
+            onClick={() => setStage("exam")}
+            disabled={!instructionsAgreed}
+            className="w-full bg-success text-white font-bold py-3 rounded-xl mt-6 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {isHi ? "आगे बढ़ें" : "PROCEED"}
+          </button>
+        </div>
+      </div>
+    );
   }
 
   const stateColor: Record<QState, string> = {
@@ -309,14 +416,44 @@ export default function ExamPage() {
         </div>
         <div className="flex items-center gap-4">
           {test.languageMode === "BOTH" && (
-            <select
-              className="border rounded px-2 py-1 text-sm"
-              value={lang}
-              onChange={(e) => setLang(e.target.value as "hi" | "en")}
-            >
-              <option value="en">English</option>
-              <option value="hi">हिंदी</option>
-            </select>
+            <div className="relative">
+              <div className="flex items-center rounded-full overflow-hidden shadow-md bg-gradient-to-r from-brand to-brand-dark">
+                <button
+                  onClick={() => setLangMenuOpen((o) => !o)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-white text-sm font-medium"
+                >
+                  <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-xs">🅰</span>
+                  {effectiveLang === "hi" ? "हिंदी" : "English"}
+                  {langOverride && <span className="text-[9px] bg-white/25 px-1.5 py-0.5 rounded-full ml-1">this Q only</span>}
+                  <span className="text-xs">▾</span>
+                </button>
+              </div>
+              {langMenuOpen && (
+                <div className="absolute right-0 mt-1.5 bg-white rounded-xl shadow-lg border py-1 w-40 z-20">
+                  <button
+                    onClick={() => {
+                      setLangOverride("en");
+                      setLangMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-brand-light ${effectiveLang === "en" ? "text-brand font-semibold" : "text-slate-700"}`}
+                  >
+                    English
+                  </button>
+                  <button
+                    onClick={() => {
+                      setLangOverride("hi");
+                      setLangMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-brand-light ${effectiveLang === "hi" ? "text-brand font-semibold" : "text-slate-700"}`}
+                  >
+                    हिंदी
+                  </button>
+                  <div className="border-t mt-1 pt-1 px-3 py-1 text-[10px] text-slate-400">
+                    Applies to this question only — next question uses your default ({defaultLang === "hi" ? "हिंदी" : "English"}).
+                  </div>
+                </div>
+              )}
+            </div>
           )}
           {warningCount > 0 && (
             <div

@@ -35,7 +35,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const body = await req.json();
   const allowed = [
-    "name", "topic", "facultyName", "difficulty", "languageMode", "description", "tags",
+    "name", "topics", "facultyName", "difficulty", "level", "languageMode", "description", "tags",
     "instructions", "estimatedTimeMin", "correctMarks", "incorrectMarks", "negativeMarkingEnabled",
     "questionTargetCount", "status",
   ];

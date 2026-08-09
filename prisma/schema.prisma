@@ -67,6 +67,15 @@ model User {
   batch        String?
   createdAt    DateTime @default(now())
 
+  // Student identity (self-registration) — only meaningful for STUDENT role
+  studentIdCode String?   @unique // permanent, auto-generated, e.g. "AP27000001"
+  mobile        String?
+  dateOfBirth   DateTime?
+  gender        String?   // "MALE" | "FEMALE" | "OTHER"
+  photoUrl      String?
+  course        String?
+  isActive      Boolean   @default(true)
+
   attempts        Attempt[]
   sessions        DeviceSession[]
   createdTests    Test[]     @relation("TestCreatedBy")
@@ -80,6 +89,31 @@ model User {
   auditLogs       AuditLog[]
   bookmarks       Bookmark[]
   notifications   Notification[]
+  passwordHistory PasswordHistory[]
+  loginAttempts   LoginAttempt[]
+}
+
+// Every previous password hash, so a new password can be checked against
+// history and rejected if it's a reuse.
+model PasswordHistory {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+// Failed-login tracking for rate-limiting / account lockout / CAPTCHA
+// triggers (Phase D) — keyed by email so it works even before we know which
+// user record (if any) is being targeted.
+model LoginAttempt {
+  id        String   @id @default(uuid())
+  email     String
+  success   Boolean
+  ipAddress String?
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
 }
 
 model TestSeries {
@@ -409,9 +443,10 @@ model Dpp {
   name           String
   subject        String
   chapter        String
-  topic          String?   // free text — admin types this manually, no fixed taxonomy
+  topics         String[]  @default([])
   facultyName    String?   // display override, e.g. "By Firoz Sir" — falls back to createdBy's name
   difficulty     String    @default("MEDIUM") // "EASY" | "MEDIUM" | "HARD" | "MIXED"
+  level          Int?      // 1-5, see lib/dppLevels.ts for what each level means
   languageMode   LanguageMode @default(BOTH)
   description    String?
   tags           String?   // comma-separated

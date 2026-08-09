@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     include: {
       createdBy: { select: { name: true } },
       questions: { select: { id: true } },
-      attempts: isStudent ? { where: { studentId: session.id }, select: { id: true, status: true } } : false,
+      attempts: isStudent ? { where: { studentId: session.id }, select: { id: true, status: true } } : { select: { id: true } },
     },
   });
 
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
   const body = await req.json();
-  const { name, subject, chapter, topic, facultyName, difficulty, languageMode, description, tags, instructions, estimatedTimeMin, correctMarks, incorrectMarks, negativeMarkingEnabled, questionTargetCount } = body;
+  const { name, subject, chapter, topics, facultyName, difficulty, level, languageMode, description, tags, instructions, estimatedTimeMin, correctMarks, incorrectMarks, negativeMarkingEnabled, questionTargetCount } = body;
 
   if (!name || !subject || !chapter) {
     return NextResponse.json({ message: "name, subject and chapter are required" }, { status: 400 });
@@ -60,9 +60,10 @@ export async function POST(req: NextRequest) {
       name,
       subject,
       chapter,
-      topic: topic || null,
+      topics: Array.isArray(topics) ? topics : [],
       facultyName: facultyName || null,
       difficulty: difficulty || "MEDIUM",
+      level: level || null,
       languageMode: languageMode || "BOTH",
       description: description || null,
       tags: tags || null,
