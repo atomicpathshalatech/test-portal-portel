@@ -6,10 +6,10 @@ const SECRET = process.env.JWT_SECRET || "dev-secret-change-me";
 
 import type { AppRole } from "./permissions";
 
-export type SessionUser = { id: string; name: string; role: AppRole; sessionId: string };
+export type SessionUser = { id: string; name: string; role: AppRole; sessionId: string; subject?: string | null };
 
 export async function hashPassword(pw: string) {
-  return bcrypt.hash(pw, 10);
+  return bcrypt.hash(pw, 12);
 }
 
 export async function verifyPassword(pw: string, hash: string) {
