@@ -82,7 +82,6 @@ export default function LoginPage() {
           </p>
         </form>
         <p className="text-center text-xs text-slate-400 mt-4">
-          Seed accounts: admin@atp.test / student@atp.test (password: <code>password123</code>)
         </p>
       </div>
     </main>
