@@ -8,17 +8,32 @@
 // functions, so we switch to "puppeteer-core" + "@sparticuz/chromium",
 // which is a serverless-optimized build.
 //
-// IMPORTANT — this also requires an env var set in the Vercel project
-// dashboard (Settings > Environment Variables), NOT just in code:
-//   AWS_LAMBDA_JS_RUNTIME = nodejs20.x   (or nodejs22.x — match your
-//   project's actual Node.js version under Settings > General)
-// @sparticuz/chromium reads this the moment the module is imported, before
-// any of our code runs, to decide which Chromium binary variant to
-// extract. Setting it inside this file is too late — it has to be present
-// in the environment before the Lambda cold-starts.
+// @sparticuz/chromium reads the Lambda runtime hint as soon as it is
+// imported, so getBrowser sets AWS_LAMBDA_JS_RUNTIME before the dynamic
+// import when the host has not provided AWS_EXECUTION_ENV.
+
+function ensureServerlessChromiumRuntimeHint() {
+  if (process.env.AWS_EXECUTION_ENV || process.env.AWS_LAMBDA_JS_RUNTIME) return;
+
+  const major = Number(process.versions.node.split(".")[0]);
+  process.env.AWS_LAMBDA_JS_RUNTIME = major >= 22 ? "nodejs22.x" : "nodejs20.x";
+}
+
+function prependLibraryPath(path: string) {
+  const existing = process.env.LD_LIBRARY_PATH;
+  if (!existing) {
+    process.env.LD_LIBRARY_PATH = path;
+    return;
+  }
+  if (!existing.split(":").includes(path)) {
+    process.env.LD_LIBRARY_PATH = `${path}:${existing}`;
+  }
+}
 
 export async function getBrowser() {
   if (process.env.VERCEL) {
+    ensureServerlessChromiumRuntimeHint();
+
     const chromium = (await import("@sparticuz/chromium")).default;
     const puppeteer = (await import("puppeteer-core")).default;
 
@@ -26,24 +41,21 @@ export async function getBrowser() {
     // crashes (libnss3.so among them) on serverless runtimes that don't
     // have a GPU/graphics stack — Chromium doesn't need one for headless
     // PDF/screenshot rendering anyway.
-    if (typeof (chromium as any).setGraphicsMode === "function") {
-      (chromium as any).setGraphicsMode(false);
-    }
+    (chromium as any).setGraphicsMode = false;
 
     const executablePath = await chromium.executablePath();
 
-    // The binary is extracted to /tmp at runtime; explicitly pointing
-    // LD_LIBRARY_PATH at that directory ensures the dynamic linker finds
-    // the .so files sitting right next to it instead of failing to
-    // resolve them from the default search path.
-    const path = await import("path");
-    process.env.LD_LIBRARY_PATH = path.dirname(executablePath);
+    // @sparticuz/chromium extracts system libraries under these folders.
+    // Keep them in the child process search path so Chromium can resolve
+    // libnss3.so and friends at launch time.
+    prependLibraryPath("/tmp/al2023/lib");
+    prependLibraryPath("/tmp/al2/lib");
 
     return puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
       executablePath,
-      headless: true,
+      headless: chromium.headless,
     });
   }
 
