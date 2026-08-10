@@ -365,9 +365,28 @@ model RankTrendPoint {
   marks        Int
   expectedRank Int
   year         Int      @default(2026)
+  confidence   String?
+  source       String?
   createdAt    DateTime @default(now())
 
   @@unique([category, marks, year])
+}
+
+model CollegeAllotment {
+  id                String   @id @default(uuid())
+  year              Int
+  round             String   @default("Round 1")
+  rank              Int
+  quota             String
+  instituteName     String
+  course            String
+  allottedCategory  String
+  candidateCategory String
+  remarks           String?
+  createdAt         DateTime @default(now())
+
+  @@index([year, rank])
+  @@index([year, course, allottedCategory])
 }
 
 // One row per login — records a device "fingerprint" (browser/OS/screen/

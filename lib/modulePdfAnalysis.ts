@@ -2,11 +2,9 @@ import { createCanvas } from "@napi-rs/canvas";
 import { prisma } from "./prisma";
 import { getSupabaseAdmin, MODULE_ASSETS_BUCKET } from "./supabaseAdmin";
 
-// pdfjs-dist's legacy build is the one meant to run outside a browser (no
-// DOM, no Worker) — the standard (non-legacy) build assumes a browser
-// environment and will not load in a Next.js API route.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
+async function getPdfjsLib() {
+  return await import("pdfjs-dist/legacy/build/pdf.mjs");
+}
 
 const RENDER_SCALE = 2; // ~144 DPI reference render — enough for on-screen editor fidelity without huge files
 
@@ -21,7 +19,8 @@ export type PageAnalysisResult = {
 // items AND embedded raster images larger than a small icon are treated as
 // hybrid (spec §5 — Type C).
 async function classifyPageType(
-  page: any
+  page: any,
+  pdfjsLib: any
 ): Promise<"DIGITAL" | "SCANNED" | "HYBRID"> {
   const textContent = await page.getTextContent();
   const hasText = textContent.items.some(
@@ -59,8 +58,9 @@ export async function analyzeModulePdf(
   onProgress?: (progress: number, stage: string) => Promise<void>
 ): Promise<PageAnalysisResult[]> {
   const supabase = getSupabaseAdmin();
+const pdfjsLib = await getPdfjsLib();
 
-  const loadingTask = pdfjsLib.getDocument({
+const loadingTask = pdfjsLib.getDocument({
     data: new Uint8Array(originalPdfBuffer),
     // Fonts/CMaps aren't bundled for the server build — standard fonts
     // load fine without them for text detection; missing glyphs on
@@ -76,7 +76,7 @@ export async function analyzeModulePdf(
   for (let i = 1; i <= pageCount; i++) {
     const page = await pdfDoc.getPage(i);
 
-    const pdfType = await classifyPageType(page);
+    const pdfType = await classifyPageType(page, pdfjsLib);
     const pngBuffer = await renderPageToPng(page);
 
     const storagePath = `${moduleId}/page-${String(i).padStart(4, "0")}.png`;
@@ -133,9 +133,10 @@ export async function extractModuleContent(
   onProgress?: (progress: number, stage: string) => Promise<void>
 ): Promise<void> {
   const { extractPageElements } = await import("./moduleExtraction");
-  const supabase = getSupabaseAdmin();
+const supabase = getSupabaseAdmin();
+const pdfjsLib = await getPdfjsLib();
 
-  const loadingTask = pdfjsLib.getDocument({
+const loadingTask = pdfjsLib.getDocument({
     data: new Uint8Array(originalPdfBuffer),
     disableFontFace: true,
   });

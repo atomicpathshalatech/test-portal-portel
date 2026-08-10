@@ -1,8 +1,11 @@
 import { createCanvas, loadImage } from "@napi-rs/canvas";
+async function getPdfjsLib() {
+  return await import("pdfjs-dist/legacy/build/pdf.mjs");
+}
 import { getSupabaseAdmin, MODULE_ASSETS_BUCKET } from "./supabaseAdmin";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
+
 
 const RENDER_SCALE = 2; // must match lib/modulePdfAnalysis.ts — reference images were rendered at this scale
 
@@ -154,7 +157,11 @@ type ImageRegion = { x: number; y: number; width: number; height: number };
 // save/restore/transform ops to track that matrix is the only reliable way
 // to get an image's real placement; pdfjs doesn't expose per-image bounds
 // directly from getOperatorList().
-async function findImageRegions(page: any, pageHeight: number): Promise<ImageRegion[]> {
+async function findImageRegions(
+  page: any,
+  pageHeight: number,
+  pdfjsLib: any
+): Promise<ImageRegion[]> {
   const opList = await page.getOperatorList();
   const regions: ImageRegion[] = [];
   const stack: Matrix[] = [IDENTITY];
@@ -265,7 +272,8 @@ export async function extractPageElements(
     });
   }
 
-  const imageRegions = await findImageRegions(page, pageHeight);
+  const pdfjsLib = await getPdfjsLib();
+const imageRegions = await findImageRegions(page, pageHeight, pdfjsLib);
   const imageElements = await extractImageElements(moduleId, pageNumber, imageRegions, referencePngBuffer);
   if (imageRegions.length > imageElements.length) {
     warnings.push({
