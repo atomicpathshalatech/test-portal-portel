@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PhotoCropUpload from "@/components/PhotoCropUpload";
+import PasswordInput from "@/components/PasswordInput";
 
 const POLICY_CHECKS = [
   { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
@@ -143,7 +144,7 @@ export default function RegisterPage() {
 
           <div>
             <label className="label">Password</label>
-            <input type="password" className="input" required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+            <PasswordInput required value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
             <div className="grid grid-cols-2 gap-1 mt-2">
               {passwordChecks.map((c) => (
                 <div key={c.label} className={`text-xs flex items-center gap-1 ${c.passed ? "text-success" : "text-slate-400"}`}>
@@ -155,7 +156,7 @@ export default function RegisterPage() {
 
           <div>
             <label className="label">Confirm Password</label>
-            <input type="password" className="input" required value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} />
+            <PasswordInput required value={form.confirmPassword} onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })} />
             {form.confirmPassword && (
               <div className={`text-xs mt-1 ${passwordsMatch ? "text-success" : "text-danger"}`}>
                 {passwordsMatch ? "✓ Passwords match" : "✗ Passwords don't match"}

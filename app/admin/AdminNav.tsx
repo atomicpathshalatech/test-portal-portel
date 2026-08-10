@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import LogoutButton from "@/components/LogoutButton";
 
 type NavItem = { href: string; label: string; icon: string };
 
@@ -14,6 +15,7 @@ const MANAGER_LINKS_TOP: NavItem[] = [
 
 const SHARED_LINKS: NavItem[] = [
   { href: "/admin/questions", label: "Question Bank", icon: "database" },
+  { href: "/admin/module-studio", label: "Module Studio", icon: "auto_stories" },
   { href: "/admin/tests", label: "Manage Tests", icon: "assignment" },
   { href: "/admin/dpps", label: "DPPs", icon: "today" },
   { href: "/admin/reports", label: "Question Reports", icon: "flag" },
@@ -73,6 +75,10 @@ export default function AdminNav({ manager }: { manager: boolean }) {
           ))}
         </>
       )}
+
+      <div className="h-px bg-white/10 my-3 mx-3" />
+      <NavLink item={{ href: "/profile", label: "My Profile", icon: "account_circle" }} active={isActive("/profile")} />
+      <LogoutButton className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm w-full text-left text-white/70 hover:bg-white/10 hover:text-white transition-all" />
     </nav>
   );
 }

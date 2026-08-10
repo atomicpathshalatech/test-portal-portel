@@ -11,13 +11,16 @@
     "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^0.1.100",
     "@prisma/client": "^5.20.0",
-    "@sparticuz/chromium": "^123.0.1",
+    "@sparticuz/chromium": "^131.0.1",
     "@supabase/supabase-js": "^2.112.1",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "katex": "^0.16.47",
     "next": "^14.2.35",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^4.7.76",
     "puppeteer": "^23.6.0",
     "puppeteer-core": "^23.6.0",
     "react": "^18.3.1",

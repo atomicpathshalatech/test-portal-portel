@@ -53,6 +53,63 @@ enum AttemptStatus {
   AUTO_SUBMITTED
 }
 
+// ---- Module Studio (PDF import → edit → brand → export pipeline) ----
+
+enum ModuleStatus {
+  DRAFT // metadata created, no file processed yet
+  PROCESSING // background job running (extraction/OCR)
+  REVIEW_REQUIRED // processed, but has low-confidence pages/elements to check
+  READY // reviewed, safe to brand/export
+  PUBLISHED // final PDF exported at least once
+  ARCHIVED
+  FAILED // processing job errored out
+}
+
+enum ModulePdfType {
+  DIGITAL
+  SCANNED
+  HYBRID
+  UNKNOWN // not yet analyzed
+}
+
+enum ModuleElementType {
+  TEXT
+  HEADING
+  SUBHEADING
+  PARAGRAPH
+  QUESTION
+  OPTION
+  SOLUTION
+  IMAGE
+  DIAGRAM
+  EQUATION
+  CHEMICAL_EQUATION
+  CHEMICAL_STRUCTURE
+  TABLE
+  SHAPE
+  LINE
+  RECTANGLE
+  CIRCLE
+  ARROW
+  TEXT_BOX
+  PAGE_BACKGROUND
+  HEADER
+  FOOTER
+  WATERMARK
+  PAGE_NUMBER
+}
+
+enum ProcessingStage {
+  UPLOADING
+  ANALYZING
+  EXTRACTING
+  OCR_PROCESSING
+  RECONSTRUCTING_LAYOUT
+  GENERATING_PREVIEW
+  READY_FOR_REVIEW
+  FAILED
+}
+
 model User {
   id           String   @id @default(uuid())
   externalRefId String? // reserved for future Atomic OPS merge
@@ -92,6 +149,8 @@ model User {
   passwordHistory PasswordHistory[]
   loginAttempts   LoginAttempt[]
   passwordResetTokens PasswordResetToken[]
+  createdModules  Module[]        @relation("ModuleCreatedBy")
+  createdBrandProfiles BrandProfile[] @relation("BrandProfileCreatedBy")
 }
 
 // Every previous password hash, so a new password can be checked against
@@ -306,42 +365,9 @@ model RankTrendPoint {
   marks        Int
   expectedRank Int
   year         Int      @default(2026)
-  // Data-quality metadata (both optional/backward-compatible — existing
-  // manually-entered points from before this field existed are untouched
-  // and simply show no badge in the UI).
-  // confidence: "EXACT" (straight from an official NTA document) |
-  //             "DERIVED" (computed from official bucket/anchor data) |
-  //             "ESTIMATED" (manual admin guess / interpolation)
-  confidence   String?
-  source       String?  // free-text citation, e.g. "NTA Re-NEET 2026 Result Notice"
   createdAt    DateTime @default(now())
 
   @@unique([category, marks, year])
-}
-
-// Previous-year AIQ (All India Quota) Round-1 seat-allotment records — real
-// "at this NEET rank, this candidate got this college+course" outcomes,
-// sourced from MCC's official round-wise allotment result PDFs. Powers the
-// College Predictor (distinct from the Rank Predictor above, which only
-// estimates marks -> AIR, not which college a rank might realistically get).
-// One row per allotted seat. NOT official for the CURRENT year — this is
-// historical reference data ("what rank got what college last time"),
-// re-imported fresh every year once each round's result PDF is out.
-model CollegeAllotment {
-  id                 String @id @default(uuid())
-  year               Int
-  round              String  @default("Round 1") // e.g. "Round 1", "Round 2", "Mop-Up"
-  rank               Int
-  quota              String  // e.g. "Open Seat Quota", "All India", "Non-Resident Indian"
-  instituteName      String
-  course             String  // "MBBS" | "BDS" | "B.Sc Nursing" | "B.Sc. Nursing"
-  allottedCategory   String  // seat category, e.g. "Open", "OBC", "SC PwD"
-  candidateCategory  String  // candidate's own category, e.g. "General", "OBC"
-  remarks            String? // e.g. "NRI Priority : 2", "PwD"
-  createdAt          DateTime @default(now())
-
-  @@index([year, rank])
-  @@index([year, course, allottedCategory])
 }
 
 // One row per login — records a device "fingerprint" (browser/OS/screen/
@@ -517,4 +543,165 @@ model DppQuestion {
   questionId String
   question   Question @relation(fields: [questionId], references: [id])
   order      Int      @default(0)
+}
+
+// A Module = one imported educational PDF and everything derived from it.
+// The original upload is never overwritten (Rule 35 of the Module Studio spec).
+model Module {
+  id           String       @id @default(uuid())
+  code         String       @unique // auto "MOD0001" style, mirrors Dpp.code convention
+  title        String
+  subject      String?
+  class        String?
+  batch        String?
+  chapter      String?
+  facultyName  String?
+  academicYear String?
+  status       ModuleStatus @default(DRAFT)
+  pdfType      ModulePdfType @default(UNKNOWN)
+
+  // Original file — retained forever, never mutated after upload.
+  originalFileUrl  String
+  originalFileName String
+  originalFileSize Int
+  pageCount        Int?
+
+  // Rights confirmation checkbox from the upload flow (spec §46). Stores who
+  // confirmed and when — not a legal opinion, just an audit trail.
+  rightsConfirmedById String?
+  rightsConfirmedAt   DateTime?
+
+  // Human review gate (spec §29-30) — set when a reviewer explicitly
+  // confirms the module, separate from Module.status so "who/when" is
+  // never lost even if status changes again later.
+  reviewedById String?
+  reviewedAt   DateTime?
+
+  brandProfileId String?
+  brandProfile   BrandProfile? @relation(fields: [brandProfileId], references: [id])
+
+  createdById String?
+  createdBy   User?    @relation("ModuleCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  pages           ModulePage[]
+  assets          ModuleAsset[]
+  versions        ModuleVersion[]
+  processingJobs  ProcessingJob[]
+  exportHistory   ModuleExport[]
+}
+
+// One page of a Module's structured document model (spec §8). elements is
+// stored as JSON rather than a fully normalized table — page layouts are
+// read/written as a whole unit by the editor, never queried element-by-element,
+// so JSON avoids an explosion of join tables for something that's always
+// fetched and saved together.
+model ModulePage {
+  id         String   @id @default(uuid())
+  moduleId   String
+  module     Module   @relation(fields: [moduleId], references: [id])
+  pageNumber Int
+  width      Float // in PDF points, from the original page
+  height     Float
+  pdfType    ModulePdfType @default(UNKNOWN) // per-page, since a module can be hybrid
+
+  // High-res rendered reference image of the original page (spec §7 — the
+  // "Original Reference Layer" every editable layer is positioned over).
+  referenceImageUrl String?
+
+  // Structured elements for this page — array of the JSON shape described
+  // in spec §8/§9. Validate shape at the application layer (Zod) rather
+  // than in the DB.
+  elements Json @default("[]")
+
+  ocrConfidence Float? // 0-1, null if page had no OCR pass (pure digital page)
+  needsReview   Boolean @default(false)
+  warnings      Json    @default("[]") // array of { type, message } — spec §29/§30
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([moduleId, pageNumber])
+}
+
+// Every image/diagram/table-as-image extracted from a module, stored once
+// and referenced by asset id from page elements (spec §8, §16, §35).
+model ModuleAsset {
+  id          String   @id @default(uuid())
+  moduleId    String
+  module      Module   @relation(fields: [moduleId], references: [id])
+  storageUrl  String
+  mimeType    String
+  width       Int?
+  height      Int?
+  sourcePage  Int? // page it was extracted from, for traceability
+  createdAt   DateTime @default(now())
+}
+
+// Snapshots of a module's full page/element state, so edits are never
+// destructive and old states can be restored (spec §34).
+model ModuleVersion {
+  id        String   @id @default(uuid())
+  moduleId  String
+  module    Module   @relation(fields: [moduleId], references: [id])
+  label     String // "Imported" | "Branding Updated" | "Page 17 Edited" | "Final Export" | custom
+  snapshot  Json // full { pages: [...] } state at save time
+  createdById String?
+  createdAt DateTime @default(now())
+}
+
+// A reusable Atomic Pathshala brand kit (spec §19) — logo, colors, header/
+// footer/watermark templates. Modules reference one; templates aren't
+// duplicated per module.
+model BrandProfile {
+  id            String   @id @default(uuid())
+  name          String
+  logoUrl       String?
+  primaryColor  String?
+  secondaryColor String?
+  fontFamily    String?
+  websiteUrl    String?
+  tagline       String?
+  headerConfig  Json @default("{}")
+  footerConfig  Json @default("{}")
+  watermarkConfig Json @default("{}")
+  isDefault     Boolean @default(false)
+
+  createdById String?
+  createdBy   User?    @relation("BrandProfileCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  modules Module[]
+}
+
+// Tracks a single background processing run for a module (spec §41). A
+// module can have several over its lifetime (re-processing after a failure,
+// re-OCR of a specific page range, etc).
+model ProcessingJob {
+  id           String          @id @default(uuid())
+  moduleId     String
+  module       Module          @relation(fields: [moduleId], references: [id])
+  stage        ProcessingStage @default(UPLOADING)
+  progress     Int             @default(0) // 0-100
+  errorMessage String?
+  startedAt    DateTime        @default(now())
+  finishedAt   DateTime?
+}
+
+// A completed branded PDF export (spec §32, §49). The file itself lives in
+// storage; this row is the history entry + download pointer.
+model ModuleExport {
+  id           String   @id @default(uuid())
+  moduleId     String
+  module       Module   @relation(fields: [moduleId], references: [id])
+  versionId    String?
+  fileUrl      String
+  fileName     String
+  fileSize     Int
+  quality      String   @default("STANDARD") // "STANDARD" | "HIGH" | "PRINT"
+  includedFrontPage Boolean @default(true)
+  includedWatermark Boolean @default(false)
+  createdById  String?
+  createdAt    DateTime @default(now())
 }

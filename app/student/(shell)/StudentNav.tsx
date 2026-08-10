@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import LogoutButton from "@/components/LogoutButton";
 
 const LINKS = [
   { href: "/student", label: "Dashboard", icon: "dashboard" },
@@ -11,7 +12,6 @@ const LINKS = [
   { href: "/student/bookmarks", label: "Bookmarks", icon: "bookmark" },
   { href: "/student/ai-coach", label: "AI Coach", icon: "psychology" },
   { href: "/student/rank-predictor", label: "Rank Predictor", icon: "target" },
-  { href: "/profile", label: "My Profile", icon: "account_circle" },
 ];
 
 export default function StudentNav() {
@@ -36,6 +36,18 @@ export default function StudentNav() {
           </Link>
         );
       })}
+
+      <div className="h-px bg-slate-200 my-3 mx-3" />
+      <Link
+        href="/profile"
+        className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all ${
+          pathname === "/profile" ? "bg-brand text-white font-semibold shadow-md" : "text-ink-soft hover:bg-surface-container"
+        }`}
+      >
+        <span className="material-symbols-outlined text-lg">account_circle</span>
+        My Profile
+      </Link>
+      <LogoutButton className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm w-full text-left text-ink-soft hover:bg-surface-container transition-all" />
     </nav>
   );
 }

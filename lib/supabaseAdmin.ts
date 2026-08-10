@@ -17,3 +17,10 @@ export function getSupabaseAdmin() {
 }
 
 export const QUESTION_IMAGES_BUCKET = "question-images";
+
+// Module Studio buckets — kept separate from question-images since these
+// hold original PDFs (private) and derived page renders/exports (also
+// private; served through signed URLs, not getPublicUrl).
+export const MODULE_ORIGINALS_BUCKET = "module-originals";
+export const MODULE_ASSETS_BUCKET = "module-assets";
+export const MODULE_EXPORTS_BUCKET = "module-exports";
