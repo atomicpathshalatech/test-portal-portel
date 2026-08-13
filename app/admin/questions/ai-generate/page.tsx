@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import FormulaText from "@/components/FormulaText";
-import { SYLLABUS } from "@/lib/syllabusData";
+import { SYLLABUS, resolveBiologySubject } from "@/lib/syllabusData";
 
 type OptionRow = { id: string; text: string };
 type Draft = {
@@ -104,7 +104,7 @@ export default function AiGenerateQuestionsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          subject: form.subject,
+          subject: resolveBiologySubject(form.subject, form.chapter),
           chapter: form.chapter,
           topic: form.topic,
           type: "SINGLE_CORRECT",
@@ -140,6 +140,7 @@ export default function AiGenerateQuestionsPage() {
           >
             <option>Physics</option>
             <option>Chemistry</option>
+            <option>Biology</option>
             <option>Botany</option>
             <option>Zoology</option>
           </select>

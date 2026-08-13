@@ -104,16 +104,16 @@ export default function RankPredictorPage() {
         <div className="flex gap-2 mb-6 border-b">
           <button
             onClick={() => setTab("marks")}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-              tab === "marks" ? "border-brand text-brand" : "border-transparent text-slate-500"
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors duration-150 ${
+              tab === "marks" ? "border-brand text-brand" : "border-transparent text-slate-500 hover:text-ink"
             }`}
           >
             Marks → Rank
           </button>
           <button
             onClick={() => setTab("college")}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-              tab === "college" ? "border-brand text-brand" : "border-transparent text-slate-500"
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors duration-150 ${
+              tab === "college" ? "border-brand text-brand" : "border-transparent text-slate-500 hover:text-ink"
             }`}
           >
             Rank → College

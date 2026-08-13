@@ -36,16 +36,32 @@ img, table {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Shared press/hover/elevation language, matched to Atomic OPS so the two
+   products feel like one ecosystem. Kept to transform/opacity/box-shadow so
+   it stays GPU-friendly (no layout thrash) — same principle OPS uses. */
 .btn-primary {
-  @apply bg-brand text-white px-5 py-2.5 rounded-full font-medium hover:bg-brand-dark transition-colors;
+  @apply bg-brand text-white px-5 py-2.5 rounded-full font-medium shadow-sm
+    hover:bg-brand-dark hover:shadow-md active:scale-[0.97] active:shadow-sm
+    transition-all duration-150 ease-out
+    disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100;
 }
 
 .btn-secondary {
-  @apply bg-surface-container text-ink px-5 py-2.5 rounded-full font-medium hover:bg-surface-high transition-colors;
+  @apply bg-surface-container text-ink px-5 py-2.5 rounded-full font-medium
+    hover:bg-surface-high active:scale-[0.97]
+    transition-all duration-150 ease-out
+    disabled:opacity-60 disabled:cursor-not-allowed disabled:active:scale-100;
 }
 
 .card {
-  @apply bg-surface-lowest rounded-2xl shadow-sm p-6;
+  @apply bg-surface-lowest rounded-2xl shadow-sm p-6 transition-shadow duration-300 ease-out;
+}
+
+/* Use on cards that are actually clickable (list rows, dashboard tiles) —
+   static containers (forms, tables, stat panels) should stay plain .card. */
+.card-interactive {
+  @apply card cursor-pointer hover:-translate-y-1 hover:shadow-lg active:translate-y-0 active:shadow-sm
+    transition-all duration-300 ease-out;
 }
 
 .input {

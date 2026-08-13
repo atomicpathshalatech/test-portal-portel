@@ -241,7 +241,7 @@ export default function DppPracticePage() {
                       setLangOverride("en");
                       setLangMenuOpen(false);
                     }}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-brand-light ${effectiveLang === "en" ? "text-brand font-semibold" : "text-slate-700"}`}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-brand-light transition-colors duration-150 ${effectiveLang === "en" ? "text-brand font-semibold" : "text-slate-700"}`}
                   >
                     English
                   </button>
@@ -250,7 +250,7 @@ export default function DppPracticePage() {
                       setLangOverride("hi");
                       setLangMenuOpen(false);
                     }}
-                    className={`w-full text-left px-3 py-2 text-sm hover:bg-brand-light ${effectiveLang === "hi" ? "text-brand font-semibold" : "text-slate-700"}`}
+                    className={`w-full text-left px-3 py-2 text-sm hover:bg-brand-light transition-colors duration-150 ${effectiveLang === "hi" ? "text-brand font-semibold" : "text-slate-700"}`}
                   >
                     हिंदी
                   </button>
@@ -271,7 +271,7 @@ export default function DppPracticePage() {
           <div className="text-sm text-slate-500 mb-2 flex items-center justify-between gap-2">
             <button
               onClick={() => setPaletteOpen(true)}
-              className="md:hidden flex items-center gap-1 text-xs bg-white border rounded-full px-3 py-1.5 shadow-sm flex-shrink-0"
+              className="md:hidden flex items-center gap-1 text-xs bg-white border rounded-full px-3 py-1.5 shadow-sm active:scale-95 transition-transform duration-150 flex-shrink-0"
             >
               <span className="material-symbols-outlined text-sm">grid_view</span>
               Palette
@@ -281,7 +281,7 @@ export default function DppPracticePage() {
             </span>
             <button
               onClick={toggleBookmark}
-              className={`text-lg ${bookmarkedIds.has(currentQ.id) ? "text-amber-500" : "text-slate-300"}`}
+              className={`text-lg hover:scale-110 active:scale-90 transition-transform duration-150 ${bookmarkedIds.has(currentQ.id) ? "text-amber-500" : "text-slate-300"}`}
               title="Bookmark this question for later revision"
             >
               {bookmarkedIds.has(currentQ.id) ? "★" : "☆"}
@@ -320,12 +320,12 @@ export default function DppPracticePage() {
                     <button
                       key={opt.id}
                       onClick={() => selectOption(opt.id)}
-                      className={`w-full text-left px-4 py-3 rounded-lg border flex items-center gap-3 ${
-                        selected ? "border-brand bg-brand-light" : "border-slate-200 hover:bg-slate-50"
+                      className={`w-full text-left px-4 py-3 rounded-lg border flex items-center gap-3 transition-all duration-150 active:scale-[0.99] ${
+                        selected ? "border-brand bg-brand-light" : "border-slate-200 hover:bg-slate-50 hover:border-slate-300"
                       }`}
                     >
                       <span
-                        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${
+                        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 transition-colors duration-150 ${
                           selected ? "bg-brand text-white" : "bg-slate-100 text-slate-500"
                         }`}
                       >
@@ -340,16 +340,16 @@ export default function DppPracticePage() {
           </div>
 
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3 mt-6">
-            <button onClick={saveAndNext} className="bg-success text-white px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg font-medium text-sm">
+            <button onClick={saveAndNext} className="bg-success text-white px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg font-medium text-sm shadow-sm hover:shadow-md active:scale-[0.97] transition-all duration-150">
               Save &amp; Next
             </button>
             <button onClick={clearResponse} className="btn-secondary text-sm py-2.5 sm:py-2">
               Clear
             </button>
-            <button onClick={saveAndMarkStay} className="bg-warning text-white px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg font-medium text-sm">
+            <button onClick={saveAndMarkStay} className="bg-warning text-white px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg font-medium text-sm shadow-sm hover:shadow-md active:scale-[0.97] transition-all duration-150">
               Save &amp; Mark for Review
             </button>
-            <button onClick={markForReview} className="bg-brand-dark text-white px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg font-medium text-sm">
+            <button onClick={markForReview} className="bg-brand-dark text-white px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg font-medium text-sm shadow-sm hover:shadow-md active:scale-[0.97] transition-all duration-150">
               Mark for Review &amp; Next
             </button>
           </div>
@@ -365,7 +365,7 @@ export default function DppPracticePage() {
             >
               {"Next >>"}
             </button>
-            <button onClick={handleSubmit} className="ml-auto bg-danger text-white px-5 py-2 rounded-lg font-medium text-sm">
+            <button onClick={handleSubmit} className="ml-auto bg-danger text-white px-5 py-2 rounded-lg font-medium text-sm shadow-sm hover:shadow-md active:scale-[0.97] transition-all duration-150">
               Submit
             </button>
           </div>
@@ -382,7 +382,7 @@ export default function DppPracticePage() {
           >
             Next →
           </button>
-          <button onClick={handleSubmit} className="ml-auto bg-danger text-white px-4 py-2 rounded-lg font-medium text-xs">
+          <button onClick={handleSubmit} className="ml-auto bg-danger text-white px-4 py-2 rounded-lg font-medium text-xs active:scale-[0.97] transition-all duration-150">
             Submit
           </button>
         </div>
@@ -445,7 +445,7 @@ export default function DppPracticePage() {
                   goTo(idx);
                   setPaletteOpen(false);
                 }}
-                className={`w-full aspect-square min-h-[2.5rem] rounded text-xs font-semibold ${stateColor[qState[q.id] || "NOT_VISITED"]} ${
+                className={`w-full aspect-square min-h-[2.5rem] rounded text-xs font-semibold active:scale-90 transition-transform duration-100 ${stateColor[qState[q.id] || "NOT_VISITED"]} ${
                   idx === currentIdx ? "ring-2 ring-brand-dark" : ""
                 }`}
               >

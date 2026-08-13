@@ -223,7 +223,7 @@ export default async function StudentDashboard() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="flex items-center gap-4 p-4 rounded-xl bg-surface-lowest hover:bg-surface transition-colors shadow-sm group"
+                  className="flex items-center gap-4 p-4 rounded-xl bg-surface-lowest hover:bg-surface hover:shadow-md transition-all duration-150 shadow-sm group"
                 >
                   <div className="w-10 h-10 rounded-lg bg-brand-light flex items-center justify-center text-brand">
                     <span className="material-symbols-outlined">{link.icon}</span>
@@ -251,7 +251,7 @@ export default async function StudentDashboard() {
                   </p>
                   <Link
                     href={`/student/result/${a.id}`}
-                    className="block p-3 rounded-xl bg-surface hover:bg-surface-container transition-colors border border-surface-highest/40"
+                    className="block p-3 rounded-xl bg-surface hover:bg-surface-container transition-colors duration-150 border border-surface-highest/40"
                   >
                     <p className="text-sm font-semibold text-ink mb-0.5">{a.test?.name || "—"}</p>
                     <p className="text-xs text-ink-soft">Score: {a.score ?? "—"}</p>

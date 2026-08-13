@@ -115,7 +115,7 @@ export default function VersionHistoryPage() {
                 <button
                   onClick={() => handleRestore(v.id, v.versionNumber)}
                   disabled={restoring === v.id || v.versionNumber === versions[0].versionNumber}
-                  className="text-xs text-brand underline disabled:opacity-30 disabled:no-underline"
+                  className="text-xs text-brand underline hover:opacity-70 transition-opacity duration-150 disabled:opacity-30 disabled:no-underline"
                 >
                   {v.versionNumber === versions[0].versionNumber ? "Current" : "Restore"}
                 </button>

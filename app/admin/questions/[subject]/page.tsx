@@ -51,7 +51,7 @@ export default async function ChapterListPage({ params }: { params: { subject: s
           <Link
             key={chapter}
             href={`/admin/questions/${encodeURIComponent(subject)}/${encodeURIComponent(chapter)}`}
-            className="card flex items-center justify-between py-3 hover:shadow-md transition-shadow"
+            className="card-interactive flex items-center justify-between py-3"
           >
             <span className="text-sm font-medium text-slate-800">{chapter}</span>
             <span

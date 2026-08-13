@@ -38,7 +38,7 @@ export default async function DppListPage({ params }: { params: { subject: strin
           const isCompleted = attempt && attempt.status !== "IN_PROGRESS";
           const isInProgress = attempt && attempt.status === "IN_PROGRESS";
           return (
-            <div key={d.id} className="card hover:shadow-lg hover:-translate-y-0.5 transition-all relative overflow-hidden">
+            <div key={d.id} className="card hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 ease-out relative overflow-hidden">
               {isCompleted && (
                 <span className="absolute top-3 right-3 text-xs px-2 py-0.5 rounded-full bg-green-100 text-success font-semibold">
                   ✓ Completed

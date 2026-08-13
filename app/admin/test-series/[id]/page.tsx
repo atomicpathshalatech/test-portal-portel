@@ -33,7 +33,7 @@ export default async function SeriesDetailPage({ params }: { params: { id: strin
 
   return (
     <div className="max-w-4xl">
-      <Link href="/admin/test-series" className="text-sm text-brand mb-4 inline-block">
+      <Link href="/admin/test-series" className="text-sm text-brand mb-4 inline-block hover:opacity-70 transition-opacity duration-150">
         ← All Test Series
       </Link>
 

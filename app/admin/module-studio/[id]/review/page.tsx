@@ -55,7 +55,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
 
   return (
     <div className="max-w-2xl">
-      <Link href={`/admin/module-studio/${params.id}`} className="text-sm text-indigo-600">
+      <Link href={`/admin/module-studio/${params.id}`} className="text-sm text-indigo-600 hover:underline transition-all duration-150">
         ← {mod.title}
       </Link>
       <h1 className="text-2xl font-semibold text-slate-900 mt-1 mb-6">Review</h1>
@@ -93,7 +93,7 @@ export default function ReviewPage({ params }: { params: { id: string } }) {
           <ul className="text-sm text-amber-700 space-y-1">
             {pendingPages.slice(0, 10).map((p) => (
               <li key={p.pageNumber}>
-                <Link href={`/admin/module-studio/${params.id}/${p.pageNumber}`} className="underline">
+                <Link href={`/admin/module-studio/${params.id}/${p.pageNumber}`} className="underline hover:opacity-70 transition-opacity duration-150">
                   Page {p.pageNumber}
                 </Link>
                 {p.warnings.length > 0 && ` — ${p.warnings.map((w) => w.message).join("; ")}`}

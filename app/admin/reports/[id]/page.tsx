@@ -66,7 +66,7 @@ export default function ReportDetailPage() {
 
   return (
     <div className="max-w-2xl">
-      <Link href="/admin/reports" className="text-sm text-brand mb-2 inline-block">
+      <Link href="/admin/reports" className="text-sm text-brand mb-2 inline-block hover:opacity-70 transition-opacity duration-150">
         ← All Reports
       </Link>
       <h1 className="text-2xl font-semibold text-slate-900 mb-1">
@@ -136,13 +136,13 @@ export default function ReportDetailPage() {
               <Link href={`/admin/questions/new?edit=${report.question.id}`} className="btn-secondary text-sm">
                 ✎ Edit Question
               </Link>
-              <button onClick={() => doAction("release")} disabled={saving} className="text-xs text-slate-400 underline">
+              <button onClick={() => doAction("release")} disabled={saving} className="text-xs text-slate-400 underline hover:opacity-70 transition-opacity duration-150">
                 Release Claim
               </button>
-              <button onClick={() => doAction("resolve")} disabled={saving} className="bg-success text-white px-4 py-2 rounded-lg text-sm">
+              <button onClick={() => doAction("resolve")} disabled={saving} className="bg-success text-white px-4 py-2 rounded-lg text-sm shadow-sm hover:shadow-md active:scale-[0.97] transition-all duration-150 disabled:opacity-50 disabled:active:scale-100">
                 ✓ Mark Resolved
               </button>
-              <button onClick={() => doAction("reject")} disabled={saving} className="bg-danger text-white px-4 py-2 rounded-lg text-sm">
+              <button onClick={() => doAction("reject")} disabled={saving} className="bg-danger text-white px-4 py-2 rounded-lg text-sm shadow-sm hover:shadow-md active:scale-[0.97] transition-all duration-150 disabled:opacity-50 disabled:active:scale-100">
                 ✗ Reject Report
               </button>
             </>
@@ -154,7 +154,7 @@ export default function ReportDetailPage() {
       </div>
 
       <div className="mt-4">
-        <Link href={`/admin/questions/versions/${report.question.id}`} className="text-xs text-purple-600 underline">
+        <Link href={`/admin/questions/versions/${report.question.id}`} className="text-xs text-purple-600 underline hover:opacity-70 transition-opacity duration-150">
           View Version History →
         </Link>
       </div>

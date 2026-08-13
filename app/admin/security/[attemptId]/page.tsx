@@ -33,7 +33,7 @@ export default async function AttemptTimelinePage({ params }: { params: { attemp
 
   return (
     <div className="max-w-2xl">
-      <Link href="/admin/security" className="text-sm text-brand mb-4 inline-block">
+      <Link href="/admin/security" className="text-sm text-brand mb-4 inline-block hover:opacity-70 transition-opacity duration-150">
         ← Back to Security Center
       </Link>
       <h1 className="text-2xl font-semibold text-slate-900 mb-1">{attempt.student.name}</h1>

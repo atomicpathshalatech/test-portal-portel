@@ -169,7 +169,7 @@ export default function RankTrendAdminPage() {
                         )}
                       </td>
                       <td className="py-1">
-                        <button onClick={() => handleDelete(p.id)} className="text-danger text-xs">
+                        <button onClick={() => handleDelete(p.id)} className="text-danger text-xs hover:underline transition-all duration-150">
                           Remove
                         </button>
                       </td>

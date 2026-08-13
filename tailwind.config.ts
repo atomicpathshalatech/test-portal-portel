@@ -9,26 +9,31 @@ const config: Config = {
     },
     extend: {
       colors: {
+        // NOTE ON PALETTE: these values are unified with Atomic OPS's Material
+        // Design 3 token set (see atomic-ops/tailwind.config.ts) so the two
+        // products read as one ecosystem once merged. Token *names* are kept
+        // as-is (brand/ink/surface/etc.) so no className strings elsewhere in
+        // this app need to change — only the hex values moved.
         brand: {
-          DEFAULT: "#9D4400", // Atomic orange (primary)
-          dark: "#773200",
-          light: "#FFF1E8",
-          container: "#FF7300",
+          DEFAULT: "#0050cb", // was Atomic orange #9D4400 -> OPS primary
+          dark: "#003fa4", // OPS on-primary-fixed-variant
+          light: "#dae1ff", // OPS primary-fixed
+          container: "#0066ff", // OPS primary-container
         },
-        success: "#16A34A",
-        warning: "#D97706",
-        danger: "#BA1A1A",
-        ink: "#191C1D",
-        "ink-soft": "#594236",
+        success: "#006643", // OPS tertiary
+        warning: "#D97706", // no OPS equivalent defined; kept as-is
+        danger: "#BA1A1A", // already matches OPS error exactly
+        ink: "#131b2e", // OPS on-surface
+        "ink-soft": "#424656", // OPS on-surface-variant
         surface: {
-          DEFAULT: "#F8F9FA",
-          low: "#F3F4F5",
-          container: "#EDEEEF",
-          high: "#E7E8E9",
-          highest: "#E1E3E4",
-          lowest: "#FFFFFF",
+          DEFAULT: "#faf8ff", // OPS background/surface
+          low: "#f2f3ff", // OPS surface-container-low
+          container: "#eaedff", // OPS surface-container
+          high: "#e2e7ff", // OPS surface-container-high
+          highest: "#dae2fd", // OPS surface-container-highest
+          lowest: "#ffffff",
         },
-        panel: "#F8F9FA",
+        panel: "#eaedff", // OPS surface-container
       },
       fontFamily: {
         sans: ["Hanken Grotesk", "Noto Sans Devanagari", "sans-serif"],

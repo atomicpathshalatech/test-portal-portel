@@ -82,7 +82,7 @@ export default function LeaderboardPage() {
             {Object.values(filters).some(Boolean) && (
               <button
                 onClick={() => setFilters({ state: "", city: "", institute: "", batch: "" })}
-                className="text-xs text-brand self-end pb-1"
+                className="text-xs text-brand self-end pb-1 hover:underline transition-all duration-150"
               >
                 Clear filters
               </button>

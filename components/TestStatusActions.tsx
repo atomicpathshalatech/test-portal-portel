@@ -54,32 +54,32 @@ export default function TestStatusActions({
           onClick={() => transition("UNDER_REVIEW")}
           disabled={loading || !questionsReady}
           title={!questionsReady ? "All sections must reach their target question count first" : ""}
-          className="text-xs text-brand underline disabled:opacity-40 disabled:no-underline"
+          className="text-xs text-brand underline hover:opacity-70 transition-opacity duration-150 disabled:opacity-40 disabled:no-underline"
         >
           Submit for Review
         </button>
       )}
 
       {(status === "UNDER_REVIEW" || status === "APPROVED") && (
-        <Link href={`/admin/tests/${testId}/review-mode`} className="text-xs text-purple-600 underline">
+        <Link href={`/admin/tests/${testId}/review-mode`} className="text-xs text-purple-600 underline hover:opacity-70 transition-opacity duration-150">
           Review Test
         </Link>
       )}
 
       {status === "UNDER_REVIEW" && canPublish && (
-        <button onClick={() => transition("APPROVED")} disabled={loading} className="text-xs text-purple-600 underline">
+        <button onClick={() => transition("APPROVED")} disabled={loading} className="text-xs text-purple-600 underline hover:opacity-70 transition-opacity duration-150">
           Approve Test
         </button>
       )}
 
       {status === "APPROVED" && canPublish && (
-        <button onClick={() => transition("PUBLISHED")} disabled={loading} className="text-xs text-success underline">
+        <button onClick={() => transition("PUBLISHED")} disabled={loading} className="text-xs text-success underline hover:opacity-70 transition-opacity duration-150">
           Publish
         </button>
       )}
 
       {status !== "DRAFT" && status !== "PUBLISHED" && canPublish && (
-        <button onClick={() => transition("DRAFT")} disabled={loading} className="text-xs text-slate-400 underline">
+        <button onClick={() => transition("DRAFT")} disabled={loading} className="text-xs text-slate-400 underline hover:opacity-70 transition-opacity duration-150">
           Revert to Draft
         </button>
       )}

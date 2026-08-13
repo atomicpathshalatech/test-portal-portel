@@ -603,7 +603,7 @@ export default function DppAddQuestionsPage() {
     <div className="fixed inset-0 flex flex-col bg-panel z-[100]">
       <div className="bg-white border-b px-3 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <Link href="/admin/dpps" className="text-sm text-brand flex-shrink-0">← DPPs</Link>
+          <Link href="/admin/dpps" className="text-sm text-brand flex-shrink-0 hover:opacity-70 transition-opacity duration-150">← DPPs</Link>
           <span className="font-semibold text-slate-800 truncate max-w-[100px] sm:max-w-none">{dpp.name}</span>
           <span className="text-xs font-mono text-brand hidden sm:inline">{dpp.code}</span>
           <span className={`text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${dpp.status === "PUBLISHED" ? "bg-green-100 text-success" : "bg-slate-100 text-slate-600"}`}>
@@ -625,7 +625,7 @@ export default function DppAddQuestionsPage() {
               Publish
             </button>
           )}
-          <button onClick={() => setDrawerOpen(true)} className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center flex-shrink-0">
+          <button onClick={() => setDrawerOpen(true)} className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 active:scale-90 transition-all duration-150 flex items-center justify-center flex-shrink-0">
             <span className="material-symbols-outlined text-slate-600 text-lg">tune</span>
           </button>
         </div>
@@ -659,20 +659,20 @@ export default function DppAddQuestionsPage() {
           {form.imageUrl && (
             <div className="mb-4 relative inline-block">
               <img src={form.imageUrl} alt="" className="max-h-48 rounded-lg border" />
-              <button onClick={() => setForm({ ...form, imageUrl: null })} className="absolute -top-2 -right-2 bg-danger text-white rounded-full w-6 h-6 text-xs">✕</button>
+              <button onClick={() => setForm({ ...form, imageUrl: null })} className="absolute -top-2 -right-2 bg-danger text-white rounded-full w-6 h-6 text-xs hover:scale-110 active:scale-90 transition-transform duration-150">✕</button>
             </div>
           )}
 
           {form.enableHi !== form.enableEn ? (
             <div className="flex items-center gap-2 mb-4">
-              <button onClick={handleAutoTranslate} disabled={autoTranslating} className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200">
+              <button onClick={handleAutoTranslate} disabled={autoTranslating} className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200 active:scale-95 transition-all duration-150">
                 {autoTranslating ? "Translating..." : `🌐 Auto-Translate to ${form.enableHi ? "English" : "Hindi"}`}
               </button>
             </div>
           ) : form.enableHi && form.enableEn ? (
             <div className="flex flex-col gap-2 mb-4">
               <div className="flex items-center gap-2">
-                <button onClick={handleCheckTranslation} disabled={checkingTranslation} className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200">
+                <button onClick={handleCheckTranslation} disabled={checkingTranslation} className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200 active:scale-95 transition-all duration-150">
                   {checkingTranslation ? "Checking..." : "🔍 AI Check Hindi Translation"}
                 </button>
                 {translationCheck && (
@@ -682,7 +682,7 @@ export default function DppAddQuestionsPage() {
                 )}
               </div>
               {translationCheck?.improvedHindiStatement && (
-                <button onClick={applyImprovedHindi} className="text-xs text-brand underline self-start">✓ Apply AI's improved Hindi (NCERT terminology)</button>
+                <button onClick={applyImprovedHindi} className="text-xs text-brand underline self-start hover:opacity-70 transition-opacity duration-150">✓ Apply AI's improved Hindi (NCERT terminology)</button>
               )}
             </div>
           ) : null}
@@ -710,9 +710,9 @@ export default function DppAddQuestionsPage() {
                         {langData.options.map((opt, idx) => {
                           const isCorrect = langData.correctOptionIds.includes(opt.id);
                           return (
-                            <div key={opt.id} className={`card relative ${isCorrect ? "border-2 border-success" : ""}`}>
+                            <div key={opt.id} className={`card relative transition-all duration-150 ${isCorrect ? "border-2 border-success" : ""}`}>
                               <div className="flex items-start gap-2">
-                                <button onClick={() => toggleCorrectFor(lang, opt.id)} className={`w-7 h-7 rounded-full text-xs font-semibold flex-shrink-0 flex items-center justify-center ${isCorrect ? "bg-success text-white" : "bg-slate-100 text-slate-500"}`}>
+                                <button onClick={() => toggleCorrectFor(lang, opt.id)} className={`w-7 h-7 rounded-full text-xs font-semibold flex-shrink-0 flex items-center justify-center active:scale-90 transition-all duration-150 ${isCorrect ? "bg-success text-white shadow-sm" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}>
                                   {opt.id}
                                 </button>
                                 <div className="flex-1">
@@ -734,7 +734,7 @@ export default function DppAddQuestionsPage() {
           </div>
 
           <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <button onClick={handleAiSolve} disabled={aiSolving} className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200">
+            <button onClick={handleAiSolve} disabled={aiSolving} className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200 active:scale-95 transition-all duration-150">
               {aiSolving ? "Thinking..." : "✨ Solve with AI (fills solution in each enabled language)"}
             </button>
             <input
@@ -748,7 +748,7 @@ export default function DppAddQuestionsPage() {
                 e.target.value = "";
               }}
             />
-            <button onClick={() => solutionImageInputRef.current?.click()} disabled={extractingSolutionImage} className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200">
+            <button onClick={() => solutionImageInputRef.current?.click()} disabled={extractingSolutionImage} className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200 active:scale-95 transition-all duration-150">
               {extractingSolutionImage ? "Reading image..." : "📷 Upload Solution Image"}
             </button>
           </div>
@@ -792,7 +792,7 @@ export default function DppAddQuestionsPage() {
                 <>
                   {" "}· AI suggests <strong>{aiResult.correctOptionId}</strong>
                   {form.en.correctOptionIds[0] !== aiResult.correctOptionId && (
-                    <> — <button onClick={applyAiAnswer} className="underline font-medium">use AI's answer</button></>
+                    <> — <button onClick={applyAiAnswer} className="underline font-medium hover:opacity-70 transition-opacity duration-150">use AI's answer</button></>
                   )}
                 </>
               )}
@@ -858,7 +858,7 @@ export default function DppAddQuestionsPage() {
             <label className="label text-xs">Question Type</label>
             <div className="grid grid-cols-2 gap-2 mb-3">
               {QUESTION_TYPES.map((t) => (
-                <button key={t.value} type="button" onClick={() => setForm({ ...form, type: t.value })} className={`text-xs px-3 py-2 rounded-lg border ${form.type === t.value ? "bg-brand text-white border-brand" : "border-slate-200 text-slate-600"}`}>
+                <button key={t.value} type="button" onClick={() => setForm({ ...form, type: t.value })} className={`text-xs px-3 py-2 rounded-lg border transition-all duration-150 active:scale-95 ${form.type === t.value ? "bg-brand text-white border-brand shadow-sm" : "border-slate-200 text-slate-600 hover:border-brand/40"}`}>
                   {t.label}
                 </button>
               ))}
@@ -867,7 +867,7 @@ export default function DppAddQuestionsPage() {
             <label className="label text-xs">Difficulty</label>
             <div className="grid grid-cols-3 gap-2 mb-4">
               {["EASY", "MEDIUM", "HARD"].map((d) => (
-                <button key={d} type="button" onClick={() => setForm({ ...form, difficulty: d })} className={`text-xs px-3 py-2 rounded-lg border capitalize ${form.difficulty === d ? "bg-brand text-white border-brand" : "border-slate-200 text-slate-600"}`}>
+                <button key={d} type="button" onClick={() => setForm({ ...form, difficulty: d })} className={`text-xs px-3 py-2 rounded-lg border capitalize transition-all duration-150 active:scale-95 ${form.difficulty === d ? "bg-brand text-white border-brand shadow-sm" : "border-slate-200 text-slate-600 hover:border-brand/40"}`}>
                   {d.toLowerCase()}
                 </button>
               ))}
@@ -887,7 +887,7 @@ export default function DppAddQuestionsPage() {
           <div className="w-full sm:w-96 bg-white h-full p-6 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-semibold text-slate-900">Question Metadata</h3>
-              <button onClick={() => setDrawerOpen(false)} className="text-slate-400">✕</button>
+              <button onClick={() => setDrawerOpen(false)} className="text-slate-400 hover:text-slate-600 active:scale-90 transition-all duration-150">✕</button>
             </div>
             <label className="label text-xs">Chapter</label>
             <select className="input mb-4" value={form.chapter} onChange={(e) => setForm({ ...form, chapter: e.target.value, topic: "", subTopic: "" })}>
@@ -903,7 +903,7 @@ export default function DppAddQuestionsPage() {
             <label className="label text-xs">Question Type</label>
             <div className="grid grid-cols-2 gap-2 mb-4">
               {QUESTION_TYPES.map((t) => (
-                <button key={t.value} onClick={() => setForm({ ...form, type: t.value })} className={`text-xs px-3 py-2 rounded-lg border ${form.type === t.value ? "bg-brand text-white border-brand" : "border-slate-200 text-slate-600"}`}>
+                <button key={t.value} onClick={() => setForm({ ...form, type: t.value })} className={`text-xs px-3 py-2 rounded-lg border transition-all duration-150 active:scale-95 ${form.type === t.value ? "bg-brand text-white border-brand shadow-sm" : "border-slate-200 text-slate-600 hover:border-brand/40"}`}>
                   {t.label}
                 </button>
               ))}
@@ -911,7 +911,7 @@ export default function DppAddQuestionsPage() {
             <label className="label text-xs">Difficulty</label>
             <div className="grid grid-cols-3 gap-2 mb-4">
               {["EASY", "MEDIUM", "HARD"].map((d) => (
-                <button key={d} onClick={() => setForm({ ...form, difficulty: d })} className={`text-xs px-3 py-2 rounded-lg border capitalize ${form.difficulty === d ? "bg-brand text-white border-brand" : "border-slate-200 text-slate-600"}`}>
+                <button key={d} onClick={() => setForm({ ...form, difficulty: d })} className={`text-xs px-3 py-2 rounded-lg border capitalize transition-all duration-150 active:scale-95 ${form.difficulty === d ? "bg-brand text-white border-brand shadow-sm" : "border-slate-200 text-slate-600 hover:border-brand/40"}`}>
                   {d.toLowerCase()}
                 </button>
               ))}
@@ -929,7 +929,7 @@ export default function DppAddQuestionsPage() {
             <p className="text-sm text-slate-500 mb-4">Save your changes before navigating, or discard them.</p>
             <div className="flex gap-2 justify-center">
               <button onClick={() => setPendingNav(null)} className="btn-secondary text-sm">Cancel</button>
-              <button onClick={discardChanges} className="bg-danger text-white px-4 py-2 rounded-lg text-sm">Discard</button>
+              <button onClick={discardChanges} className="bg-danger text-white px-4 py-2 rounded-lg text-sm shadow-sm hover:shadow-md active:scale-[0.97] transition-all duration-150">Discard</button>
               <button onClick={handleSave} className="btn-primary text-sm">Save First</button>
             </div>
           </div>

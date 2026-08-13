@@ -30,7 +30,7 @@ export default async function DppChaptersPage({ params }: { params: { subject: s
             <Link
               key={c}
               href={`/student/dpp/${encodeURIComponent(subject)}/${encodeURIComponent(c)}`}
-              className="card flex items-center justify-between hover:shadow-md transition-shadow"
+              className="card-interactive flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
                 <span className="w-8 h-8 rounded-full bg-brand-light text-brand flex items-center justify-center text-xs font-bold flex-shrink-0">

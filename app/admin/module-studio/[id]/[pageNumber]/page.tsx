@@ -22,7 +22,7 @@ export default async function PageEditorRoute({
     <div>
       <div className="flex items-center justify-between mb-4">
         <div>
-          <Link href={`/admin/module-studio/${mod.id}`} className="text-sm text-indigo-600">
+          <Link href={`/admin/module-studio/${mod.id}`} className="text-sm text-indigo-600 hover:underline transition-all duration-150">
             ← {mod.title}
           </Link>
           <h1 className="text-xl font-semibold text-slate-900">Page {pageNumber}</h1>

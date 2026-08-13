@@ -58,7 +58,12 @@ Difficulty: ${difficulty}`;
 
   let raw = "";
   try {
-    raw = await callGemini({ system, user, maxTokens: 4000 });
+    // Scale the token budget with how much text we've actually asked for —
+    // a flat cap was too low for multiple/bilingual questions and Gemini
+    // would get cut off mid-question, producing invalid (truncated) JSON.
+    const perQuestionTokens = wantsEn && wantsHi ? 1400 : 900;
+    const maxTokens = Math.min(8192, 800 + n * perQuestionTokens);
+    raw = await callGemini({ system, user, maxTokens });
     const parsed = parseJsonResponse<{ questions: GeneratedQuestion[] }>(raw);
     return NextResponse.json(parsed);
   } catch (err: any) {

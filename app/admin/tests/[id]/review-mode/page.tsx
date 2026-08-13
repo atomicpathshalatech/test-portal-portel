@@ -77,7 +77,7 @@ export default function ReviewModePage() {
     return (
       <div className="max-w-lg mx-auto text-center py-20">
         <p className="text-slate-500">No questions to review yet.</p>
-        <Link href="/admin/tests" className="text-brand text-sm underline mt-2 inline-block">
+        <Link href="/admin/tests" className="text-brand text-sm underline mt-2 inline-block hover:opacity-70 transition-opacity duration-150">
           ← Back to Manage Tests
         </Link>
       </div>
@@ -95,7 +95,7 @@ export default function ReviewModePage() {
       {/* Top bar */}
       <div className="bg-white border-b px-3 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <Link href="/admin/tests" className="text-sm text-brand flex-shrink-0">← Back</Link>
+          <Link href="/admin/tests" className="text-sm text-brand flex-shrink-0 hover:opacity-70 transition-opacity duration-150">← Back</Link>
           <span className="font-semibold text-slate-800 truncate max-w-[120px] sm:max-w-none">{test.name}</span>
           <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium uppercase hidden sm:inline">Review Mode</span>
         </div>
@@ -117,7 +117,7 @@ export default function ReviewModePage() {
               <button
                 key={d}
                 onClick={() => setDevice(d)}
-                className={`px-2 sm:px-3 py-1.5 rounded-full font-medium ${device === d ? "bg-white shadow-sm text-brand" : "text-slate-500"}`}
+                className={`px-2 sm:px-3 py-1.5 rounded-full font-medium transition-all duration-150 ${device === d ? "bg-white shadow-sm text-brand" : "text-slate-500 hover:text-ink"}`}
               >
                 {d === "mobile" ? "📱" : d === "tablet" ? "💻" : "🖥"}
               </button>
@@ -135,7 +135,7 @@ export default function ReviewModePage() {
               <button
                 key={q.id}
                 onClick={() => setFlatIdx(idx)}
-                className={`aspect-square min-w-[2rem] rounded text-xs font-semibold ${statusColor[q.reviewStatus]} ${
+                className={`aspect-square min-w-[2rem] rounded text-xs font-semibold active:scale-90 transition-transform duration-100 ${statusColor[q.reviewStatus]} ${
                   idx === flatIdx ? "ring-2 ring-brand-dark" : ""
                 }`}
               >
@@ -169,7 +169,7 @@ export default function ReviewModePage() {
                   return (
                     <div
                       key={opt.id}
-                      className={`px-4 py-3 rounded-lg border flex items-center gap-3 ${
+                      className={`px-4 py-3 rounded-lg border flex items-center gap-3 transition-colors duration-150 ${
                         isCorrect ? "border-success bg-green-50" : "border-slate-200"
                       }`}
                     >
@@ -214,7 +214,7 @@ export default function ReviewModePage() {
           ← Previous
         </button>
         <div className="flex items-center gap-1.5 sm:gap-2 order-3 sm:order-2 w-full sm:w-auto justify-center">
-          <button onClick={() => setReview("REJECTED")} disabled={saving} className="bg-danger text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm">
+          <button onClick={() => setReview("REJECTED")} disabled={saving} className="bg-danger text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm shadow-sm hover:shadow-md active:scale-[0.97] transition-all duration-150 disabled:opacity-50 disabled:active:scale-100">
             ✗ Reject
           </button>
           <Link
@@ -225,7 +225,7 @@ export default function ReviewModePage() {
           >
             ✎ Edit
           </Link>
-          <button onClick={() => setReview("APPROVED")} disabled={saving} className="bg-success text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm">
+          <button onClick={() => setReview("APPROVED")} disabled={saving} className="bg-success text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm shadow-sm hover:shadow-md active:scale-[0.97] transition-all duration-150 disabled:opacity-50 disabled:active:scale-100">
             ✓ Approve
           </button>
         </div>

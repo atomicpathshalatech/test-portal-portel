@@ -11,8 +11,24 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
   const role = req.nextUrl.searchParams.get("role");
+  const search = req.nextUrl.searchParams.get("search")?.trim();
+
+  const where: any = { role: role ? (role as any) : { not: "STUDENT" } }; // default: staff accounts only
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { email: { contains: search, mode: "insensitive" } },
+      { mobile: { contains: search } },
+      { studentIdCode: { contains: search, mode: "insensitive" } },
+      { city: { contains: search, mode: "insensitive" } },
+      { state: { contains: search, mode: "insensitive" } },
+      { course: { contains: search, mode: "insensitive" } },
+      { category: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
   const users = await prisma.user.findMany({
-    where: { role: role ? (role as any) : { not: "STUDENT" } }, // default: staff accounts only
+    where,
     select: {
       id: true,
       name: true,
@@ -21,6 +37,18 @@ export async function GET(req: NextRequest) {
       subject: true,
       institute: true,
       createdAt: true,
+      // Registration-form fields — populated for students, null for staff
+      // accounts that were created directly by an admin instead.
+      mobile: true,
+      studentIdCode: true,
+      dateOfBirth: true,
+      gender: true,
+      state: true,
+      city: true,
+      category: true,
+      subCategory: true,
+      course: true,
+      isActive: true,
     },
     orderBy: { createdAt: "desc" },
   });

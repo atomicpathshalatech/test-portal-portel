@@ -166,7 +166,7 @@ export default function PageCanvas({
           {saveState === "idle" && "No unsaved changes"}
         </span>
         {selected && (
-          <button onClick={deleteSelected} className="text-red-600 hover:underline">
+          <button onClick={deleteSelected} className="text-red-600 hover:underline hover:opacity-70 transition-opacity duration-150">
             Delete selected ({selected.type})
           </button>
         )}

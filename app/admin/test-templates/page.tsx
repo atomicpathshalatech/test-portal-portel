@@ -61,7 +61,7 @@ export default function TestTemplatesPage() {
                   {new Date(t.createdAt).toLocaleDateString()}
                 </div>
               </div>
-              <button onClick={() => handleDelete(t.id, t.name)} className="text-xs text-danger underline">
+              <button onClick={() => handleDelete(t.id, t.name)} className="text-xs text-danger underline hover:opacity-70 transition-opacity duration-150">
                 Delete
               </button>
             </div>

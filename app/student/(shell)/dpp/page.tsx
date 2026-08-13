@@ -18,7 +18,7 @@ export default function DppSubjectsPage() {
           <Link
             key={s.name}
             href={`/student/dpp/${encodeURIComponent(s.name)}`}
-            className="card flex flex-col items-center text-center gap-3 py-8 hover:shadow-md hover:-translate-y-0.5 transition-all"
+            className="card-interactive flex flex-col items-center text-center gap-3 py-8"
           >
             <div className={`w-16 h-16 rounded-full flex items-center justify-center text-3xl ${s.color}`}>{s.icon}</div>
             <span className="font-semibold text-ink">{s.name}</span>

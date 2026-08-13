@@ -169,8 +169,8 @@ function QuestionEditor({
             <button
               key={tr.language}
               onClick={() => setLang(tr.language)}
-              className={`text-xs px-3 py-1 rounded-full ${
-                lang === tr.language ? "bg-brand text-white" : "bg-slate-100 text-slate-600"
+              className={`text-xs px-3 py-1 rounded-full transition-all duration-150 active:scale-95 ${
+                lang === tr.language ? "bg-brand text-white shadow-sm" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
               {tr.language.toUpperCase()}
@@ -200,8 +200,8 @@ function QuestionEditor({
                 <button
                   key={opt.id}
                   onClick={() => toggleOption(opt.id)}
-                  className={`w-9 h-9 rounded-full text-sm font-semibold ${
-                    correctIds.includes(opt.id) ? "bg-success text-white" : "bg-slate-100 text-slate-500"
+                  className={`w-9 h-9 rounded-full text-sm font-semibold active:scale-90 transition-all duration-150 ${
+                    correctIds.includes(opt.id) ? "bg-success text-white shadow-sm" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
                   }`}
                 >
                   {opt.id}

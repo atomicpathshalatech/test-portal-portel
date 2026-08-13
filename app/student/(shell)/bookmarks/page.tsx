@@ -78,7 +78,7 @@ export default function BookmarksPage() {
                           <button
                             key={l}
                             onClick={() => setLangChoice((prev) => ({ ...prev, [b.question.id]: l }))}
-                            className={`px-2 py-0.5 rounded-full font-medium ${
+                            className={`px-2 py-0.5 rounded-full font-medium transition-all duration-150 ${
                               preferredLang === l ? "bg-white shadow-sm text-brand" : "text-ink-soft"
                             }`}
                           >
@@ -89,7 +89,7 @@ export default function BookmarksPage() {
                     )}
                     <button
                       onClick={() => removeBookmark(b.question.id)}
-                      className="text-amber-500 text-lg"
+                      className="text-amber-500 text-lg hover:scale-110 active:scale-90 transition-transform duration-150"
                       title="Remove bookmark"
                     >
                       ★
@@ -139,7 +139,7 @@ export default function BookmarksPage() {
                 <div className="flex items-center justify-between mt-3">
                   <button
                     onClick={() => setRevealAnswer((prev) => ({ ...prev, [b.question.id]: !prev[b.question.id] }))}
-                    className="text-brand text-xs font-medium"
+                    className="text-brand text-xs font-medium hover:underline transition-all duration-150"
                   >
                     {revealed ? "Hide Answer" : "Show Answer"}
                   </button>

@@ -17,14 +17,16 @@ export async function POST(req: NextRequest) {
   const gender = String(formData.get("gender") || "");
   const state = String(formData.get("state") || "").trim();
   const city = String(formData.get("city") || "").trim();
+  const category = String(formData.get("category") || "").trim();
+  const subCategory = String(formData.get("subCategory") || "None").trim();
   const course = String(formData.get("course") || "").trim();
   const password = String(formData.get("password") || "");
   const confirmPassword = String(formData.get("confirmPassword") || "");
   const photo = formData.get("photo") as File | null;
 
   // ---- Validation ----
-  if (!name || !mobile || !email || !dateOfBirth || !gender || !state || !city || !course) {
-    return NextResponse.json({ message: "All fields except photo are required." }, { status: 400 });
+  if (!name || !mobile || !email || !dateOfBirth || !gender || !state || !city || !category || !course) {
+    return NextResponse.json({ message: "All fields except photo and sub-category are required." }, { status: 400 });
   }
   if (!/^\S+@\S+\.\S+$/.test(email)) {
     return NextResponse.json({ message: "Enter a valid email address." }, { status: 400 });
@@ -88,6 +90,8 @@ export async function POST(req: NextRequest) {
       gender,
       state,
       city,
+      category,
+      subCategory,
       course,
       photoUrl,
       studentIdCode,

@@ -45,7 +45,7 @@ export default function AdminShellClient({
           <AdminNav manager={manager} />
         </div>
         <div className="p-4 flex-shrink-0">
-          <Link href="/profile" className="bg-white/10 hover:bg-white/15 transition-colors rounded-xl p-3 flex items-center gap-3">
+          <Link href="/profile" className="bg-white/10 hover:bg-white/15 transition-colors duration-150 rounded-xl p-3 flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
               <span className="material-symbols-outlined text-white text-lg">person</span>
             </div>

@@ -101,7 +101,7 @@ export default function ReportsDashboardPage() {
                     </span>
                   </td>
                   <td className="py-2 pr-4">
-                    <Link href={`/admin/reports/${r.id}`} className="text-brand text-xs underline">
+                    <Link href={`/admin/reports/${r.id}`} className="text-brand text-xs underline hover:opacity-70 transition-opacity duration-150">
                       View →
                     </Link>
                   </td>

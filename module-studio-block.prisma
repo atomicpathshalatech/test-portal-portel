@@ -1,0 +1,650 @@
+﻿enum ModuleStatus {
+  DRAFT // metadata created, no file processed yet
+  PROCESSING // background job running (extraction/OCR)
+  REVIEW_REQUIRED // processed, but has low-confidence pages/elements to check
+  READY // reviewed, safe to brand/export
+  PUBLISHED // final PDF exported at least once
+  ARCHIVED
+  FAILED // processing job errored out
+}
+
+enum ModulePdfType {
+  DIGITAL
+  SCANNED
+  HYBRID
+  UNKNOWN // not yet analyzed
+}
+
+enum ModuleElementType {
+  TEXT
+  HEADING
+  SUBHEADING
+  PARAGRAPH
+  QUESTION
+  OPTION
+  SOLUTION
+  IMAGE
+  DIAGRAM
+  EQUATION
+  CHEMICAL_EQUATION
+  CHEMICAL_STRUCTURE
+  TABLE
+  SHAPE
+  LINE
+  RECTANGLE
+  CIRCLE
+  ARROW
+  TEXT_BOX
+  PAGE_BACKGROUND
+  HEADER
+  FOOTER
+  WATERMARK
+  PAGE_NUMBER
+}
+
+enum ProcessingStage {
+  UPLOADING
+  ANALYZING
+  EXTRACTING
+  OCR_PROCESSING
+  RECONSTRUCTING_LAYOUT
+  GENERATING_PREVIEW
+  READY_FOR_REVIEW
+  FAILED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  externalRefId String? // reserved for future Atomic OPS merge
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(STUDENT)
+  subject      String?  // assigned subject, only meaningful for TEACHER role
+  state        String?  // for leaderboard filters
+  city         String?
+  institute    String?
+  batch        String?
+  createdAt    DateTime @default(now())
+
+  // Student identity (self-registration) ΓÇö only meaningful for STUDENT role
+  studentIdCode String?   @unique // permanent, auto-generated, e.g. "AP27000001"
+  mobile        String?
+  dateOfBirth   DateTime?
+  gender        String?   // "MALE" | "FEMALE" | "OTHER"
+  photoUrl      String?
+  course        String?
+  isActive      Boolean   @default(true)
+
+  attempts        Attempt[]
+  sessions        DeviceSession[]
+  createdTests    Test[]     @relation("TestCreatedBy")
+  createdDpps     Dpp[]      @relation("DppCreatedBy")
+  createdTestTemplates TestTemplate[] @relation("TestTemplateCreatedBy")
+  createdQuestions Question[] @relation("QuestionCreatedBy")
+  publishedQuestions Question[] @relation("QuestionPublishedBy")
+  questionVersionsEdited QuestionVersion[] @relation("QuestionVersionEditedBy")
+  reportsFiled    QuestionReport[] @relation("ReportFiledBy")
+  reportsClaimed  QuestionReport[] @relation("ReportClaimedBy")
+  auditLogs       AuditLog[]
+  bookmarks       Bookmark[]
+  notifications   Notification[]
+  passwordHistory PasswordHistory[]
+  loginAttempts   LoginAttempt[]
+  passwordResetTokens PasswordResetToken[]
+  createdModules  Module[]        @relation("ModuleCreatedBy")
+  createdBrandProfiles BrandProfile[] @relation("BrandProfileCreatedBy")
+}
+
+// Every previous password hash, so a new password can be checked against
+// history and rejected if it's a reuse.
+model PasswordHistory {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  passwordHash String
+  createdAt    DateTime @default(now())
+}
+
+// Failed-login tracking for rate-limiting / account lockout / CAPTCHA
+// triggers (Phase D) ΓÇö keyed by email so it works even before we know which
+// user record (if any) is being targeted.
+model LoginAttempt {
+  id        String   @id @default(uuid())
+  email     String
+  success   Boolean
+  ipAddress String?
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+// One-time, expiring token for the "forgot password" email link.
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+}
+
+model TestSeries {
+  id          String   @id @default(uuid())
+  externalRefId String?
+  name        String
+  code        String   @unique
+  description String?
+  tags        String?  // comma-separated
+  thumbnailUrl String?
+  examType    String?  // "NEET" | "BOARDS" | "JEE" | "CUET"
+  course      String?
+  className   String?
+  visibility  String   @default("PRIVATE") // "PUBLIC" | "PRIVATE"
+  targetBatch String?
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+
+  tests       Test[]
+}
+
+model Test {
+  id             String       @id @default(uuid())
+  externalRefId  String?
+  testSeriesId   String
+  testSeries     TestSeries   @relation(fields: [testSeriesId], references: [id])
+  name           String
+  description    String?
+  code           String       @unique // auto 5-digit
+  testType       String?      // "FULL_SYLLABUS" | "CHAPTER_TEST" | "MINOR" | "MAJOR" | "MOCK" | "PRACTICE"
+  examType       String?      // "NEET" | "BOARDS"
+  questionFormat String       @default("OBJECTIVE") // "OBJECTIVE" | "SUBJECTIVE"
+  instructions   String?
+  languageMode   LanguageMode @default(BOTH)
+  durationMin    Int
+  openTime       DateTime
+  closeTime      DateTime
+  correctMarks   Float        @default(4)
+  incorrectMarks Float        @default(-1)
+  negativeMarkingEnabled Boolean @default(true)
+  status         TestStatus   @default(DRAFT)
+  archived       Boolean      @default(false)
+  createdById    String?
+  createdBy      User?        @relation("TestCreatedBy", fields: [createdById], references: [id])
+  reminder15SentAt DateTime?
+  startNotifiedAt  DateTime?
+  createdAt      DateTime     @default(now())
+
+  sections       Section[]
+  attempts       Attempt[]
+}
+
+model Section {
+  id           String   @id @default(uuid())
+  testId       String
+  test         Test     @relation(fields: [testId], references: [id])
+  name         String   // e.g. Physics, Chemistry
+  subject      String   // locks question-entry to this subject
+  targetCount  Int      @default(0) // how many questions this section should have
+  marksPerQuestion Float?
+  negativeMarks    Float?
+  order        Int      @default(0)
+
+  questions SectionQuestion[]
+}
+
+model Question {
+  id          String       @id @default(uuid())
+  externalRefId String?
+  questionCode String?     @unique // e.g. "PH10025" ΓÇö 2-letter subject prefix + 5 digits, permanent
+  subject     String
+  chapter     String?
+  topic       String?
+  subTopic    String?
+  type        QuestionType @default(SINGLE_CORRECT)
+  category    String?      // "PYQ" | "PRACTICE" | "MODULE" | "ASSIGNMENT"
+  pyqSource   String?      // e.g. "NEET 2026", "JEE Main 2024 January", "AIPMT 1998"
+  difficulty  Difficulty   @default(MEDIUM)
+  imageUrl    String?      // optional diagram/graph image, shared across languages
+  solution    String?      // explanation/solution text, supports the same $formula$ syntax as statements
+  tags        String?      // comma-separated, e.g. "NCERT, Important, Numerical"
+  usageCount  Int          @default(0) // how many tests currently include this question
+  createdById String?
+  createdBy   User?        @relation("QuestionCreatedBy", fields: [createdById], references: [id])
+  isPublished   Boolean   @default(false) // becomes true the first time this question is part of a PUBLISHED test
+  publishedById String?
+  publishedBy   User?     @relation("QuestionPublishedBy", fields: [publishedById], references: [id])
+  publishedAt   DateTime?
+  createdAt   DateTime     @default(now())
+
+  translations QuestionTranslation[]
+  sectionLinks SectionQuestion[]
+  dppLinks     DppQuestion[]
+  attemptAnswers AttemptAnswer[]
+  bookmarks    Bookmark[]
+  versions     QuestionVersion[]
+  reports      QuestionReport[]
+}
+
+// One row per language (hi / en) ΓÇö supports Single or Both language mode
+// without duplicating the question record.
+model QuestionTranslation {
+  id          String   @id @default(uuid())
+  questionId  String
+  question    Question @relation(fields: [questionId], references: [id])
+  language    String   // "hi" | "en"
+  statement   String
+  options     Json     // [{ id: "A", text: "..." }, ...]
+  correctOptionIds Json // ["A"] or ["A","C"] for multi-correct
+  solution    String?  // this language's solution/explanation ΓÇö students only ever see the solution matching the language they're viewing in
+
+  @@unique([questionId, language])
+}
+
+model SectionQuestion {
+  id         String   @id @default(uuid())
+  sectionId  String
+  section    Section  @relation(fields: [sectionId], references: [id])
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id])
+  order      Int      @default(0)
+  marksOverride         Float?
+  negativeMarksOverride Float?
+  reviewStatus String @default("PENDING") // "PENDING" | "APPROVED" | "REJECTED"
+}
+
+model Attempt {
+  id          String        @id @default(uuid())
+  testId      String?
+  test        Test?         @relation(fields: [testId], references: [id])
+  dppId       String?
+  dpp         Dpp?          @relation(fields: [dppId], references: [id])
+  studentId   String
+  student     User          @relation(fields: [studentId], references: [id])
+  status      AttemptStatus @default(IN_PROGRESS)
+  startedAt   DateTime      @default(now())
+  submittedAt DateTime?
+  score       Float?
+  rank        Int?
+  integrityScore Int        @default(100)
+
+  answers     AttemptAnswer[]
+  violations  AttemptViolation[]
+
+  @@unique([testId, studentId])
+  @@unique([dppId, studentId])
+}
+
+model AttemptAnswer {
+  id             String   @id @default(uuid())
+  attemptId      String
+  attempt        Attempt  @relation(fields: [attemptId], references: [id])
+  questionId     String
+  question       Question @relation(fields: [questionId], references: [id])
+  selectedOptionIds Json  @default("[]")
+  isCorrect      Boolean?
+  timeTakenSec   Int      @default(0)
+  updatedAt      DateTime @updatedAt
+
+  @@unique([attemptId, questionId])
+}
+
+model AttemptViolation {
+  id        String   @id @default(uuid())
+  attemptId String
+  attempt   Attempt  @relation(fields: [attemptId], references: [id])
+  type      String   // FULLSCREEN_EXIT | TAB_SWITCH | ...
+  timestamp DateTime @default(now())
+}
+
+// Admin-curated historical marks-vs-rank data, used by the Rank Predictor.
+// This is NOT an official NTA tool ΓÇö it's a statistical estimate based on
+// whatever previous-year data the admin enters here. Update every year.
+model RankTrendPoint {
+  id           String   @id @default(uuid())
+  category     String   // "General" | "OBC" | "SC" | "ST" | "EWS"
+  marks        Int
+  expectedRank Int
+  year         Int      @default(2026)
+  createdAt    DateTime @default(now())
+
+  @@unique([category, marks, year])
+}
+
+// One row per login ΓÇö records a device "fingerprint" (browser/OS/screen/
+// timezone) so Admin can audit logins and, when the single-session policy
+// is on, so a login from a new device can revoke the old one.
+model DeviceSession {
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  deviceHash    String
+  deviceType    String   // "mobile" | "desktop"
+  browser       String?
+  os            String?
+  timezone      String?
+  screenRes     String?
+  ipAddress     String?
+  createdAt     DateTime  @default(now())
+  revokedAt     DateTime?
+  revokedReason String?
+}
+
+// Single-row global config. id is always "singleton".
+// policy: "SINGLE_SESSION" (default, only one device ever) |
+//         "MOBILE_PLUS_WEB" (one mobile + one desktop session allowed together) |
+//         "UNLIMITED" (no restriction, just logged for audit)
+model SecurityConfig {
+  id     String @id @default("singleton")
+  policy String @default("SINGLE_SESSION")
+}
+
+// Record every significant action (create/edit/delete/publish/approve/
+// login) for accountability across the role hierarchy. Super Admin sees
+// everything; Sub Admin has view access per the RBAC spec.
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  action     String
+  entityType String?
+  entityId   String?
+  details    String?
+  createdAt  DateTime @default(now())
+}
+
+// A student saving a question for later revision/practice.
+model Bookmark {
+  id         String   @id @default(uuid())
+  studentId  String
+  student    User     @relation(fields: [studentId], references: [id])
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([studentId, questionId])
+}
+
+// Simple per-user notification inbox. Admin broadcasts fan out to one row
+// per targeted student (denormalized, but keeps "my notifications" queries
+// trivial ΓÇö no join needed).
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// Immutable, permanent audit trail ΓÇö but ONLY for edits made AFTER a
+// question has been published (part of a PUBLISHED test) at least once.
+// Draft-stage edits are never tracked here (unlimited free editing before
+// publish, per the Post-Publish Audit Policy).
+model QuestionVersion {
+  id            String   @id @default(uuid())
+  questionId    String
+  question      Question @relation(fields: [questionId], references: [id])
+  versionNumber Int
+  editedById    String
+  editedBy      User     @relation("QuestionVersionEditedBy", fields: [editedById], references: [id])
+  editedAt      DateTime @default(now())
+  reason        String?
+  changeType    String   @default("EDIT") // "EDIT" | "RESTORE"
+  snapshot      Json     // full question+translations state AFTER this edit was applied
+
+  @@unique([questionId, versionNumber])
+}
+
+// A student-filed report on a question ("Wrong Answer", "Typo", etc), with
+// a claim-to-edit lock so only one teacher works on it at a time.
+model QuestionReport {
+  id             String    @id @default(uuid())
+  questionId     String
+  question       Question  @relation(fields: [questionId], references: [id])
+  testId         String?
+  reasonTags     String    // comma-separated: WRONG_ANSWER,TYPO,...
+  comment        String?
+  screenshotUrl  String?
+  priority       String    @default("MEDIUM") // "LOW" | "MEDIUM" | "HIGH"
+  status         String    @default("NEW") // "NEW" | "CLAIMED" | "RESOLVED" | "REJECTED"
+  reportedById   String
+  reportedBy     User      @relation("ReportFiledBy", fields: [reportedById], references: [id])
+  claimedById    String?
+  claimedBy      User?     @relation("ReportClaimedBy", fields: [claimedById], references: [id])
+  claimedAt      DateTime?
+  teacherNotes   String?
+  createdAt      DateTime  @default(now())
+  resolvedAt     DateTime?
+}
+
+// A reusable section-structure blueprint ΓÇö save it once (e.g. "NEET Full
+// Syllabus 180Q"), then load it into any new test's builder instead of
+// re-typing section name/subject/count/marks every single time.
+model TestTemplate {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdById String?
+  createdBy   User?    @relation("TestTemplateCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  sections TestTemplateSection[]
+}
+
+model TestTemplateSection {
+  id               String       @id @default(uuid())
+  templateId       String
+  template         TestTemplate @relation(fields: [templateId], references: [id])
+  name             String
+  subject          String
+  targetCount      Int
+  marksPerQuestion Float?
+  negativeMarks    Float?
+  order            Int          @default(0)
+}
+
+// Daily Practice Problems ΓÇö a lighter, single-chapter-scoped practice set
+// that deliberately reuses the Test module's Question/QuestionTranslation
+// data, exam runtime, scoring, and version-history systems rather than
+// duplicating them. A DPP is essentially a standalone "section" of its own.
+model Dpp {
+  id             String    @id @default(uuid())
+  code           String    @unique // auto "AP0001" style, never editable
+  name           String
+  subject        String
+  chapter        String
+  topics         String[]  @default([])
+  facultyName    String?   // display override, e.g. "By Firoz Sir" ΓÇö falls back to createdBy's name
+  difficulty     String    @default("MEDIUM") // "EASY" | "MEDIUM" | "HARD" | "MIXED"
+  level          Int?      // 1-5, see lib/dppLevels.ts for what each level means
+  languageMode   LanguageMode @default(BOTH)
+  description    String?
+  tags           String?   // comma-separated
+  instructions   String?
+  estimatedTimeMin Int     @default(30)
+  correctMarks   Float     @default(4)
+  incorrectMarks Float     @default(-1)
+  negativeMarkingEnabled Boolean @default(true)
+  questionTargetCount Int  @default(0)
+  status         String    @default("DRAFT") // "DRAFT" | "PUBLISHED"
+  createdById    String?
+  createdBy      User?     @relation("DppCreatedBy", fields: [createdById], references: [id])
+  createdAt      DateTime  @default(now())
+
+  questions DppQuestion[]
+  attempts  Attempt[]
+}
+
+model DppQuestion {
+  id         String   @id @default(uuid())
+  dppId      String
+  dpp        Dpp      @relation(fields: [dppId], references: [id])
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id])
+  order      Int      @default(0)
+}
+
+// A Module = one imported educational PDF and everything derived from it.
+// The original upload is never overwritten (Rule 35 of the Module Studio spec).
+model Module {
+  id           String       @id @default(uuid())
+  code         String       @unique // auto "MOD0001" style, mirrors Dpp.code convention
+  title        String
+  subject      String?
+  class        String?
+  batch        String?
+  chapter      String?
+  facultyName  String?
+  academicYear String?
+  status       ModuleStatus @default(DRAFT)
+  pdfType      ModulePdfType @default(UNKNOWN)
+
+  // Original file ΓÇö retained forever, never mutated after upload.
+  originalFileUrl  String
+  originalFileName String
+  originalFileSize Int
+  pageCount        Int?
+
+  // Rights confirmation checkbox from the upload flow (spec ┬º46). Stores who
+  // confirmed and when ΓÇö not a legal opinion, just an audit trail.
+  rightsConfirmedById String?
+  rightsConfirmedAt   DateTime?
+
+  // Human review gate (spec ┬º29-30) ΓÇö set when a reviewer explicitly
+  // confirms the module, separate from Module.status so "who/when" is
+  // never lost even if status changes again later.
+  reviewedById String?
+  reviewedAt   DateTime?
+
+  brandProfileId String?
+  brandProfile   BrandProfile? @relation(fields: [brandProfileId], references: [id])
+
+  createdById String?
+  createdBy   User?    @relation("ModuleCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  pages           ModulePage[]
+  assets          ModuleAsset[]
+  versions        ModuleVersion[]
+  processingJobs  ProcessingJob[]
+  exportHistory   ModuleExport[]
+}
+
+// One page of a Module's structured document model (spec ┬º8). elements is
+// stored as JSON rather than a fully normalized table ΓÇö page layouts are
+// read/written as a whole unit by the editor, never queried element-by-element,
+// so JSON avoids an explosion of join tables for something that's always
+// fetched and saved together.
+model ModulePage {
+  id         String   @id @default(uuid())
+  moduleId   String
+  module     Module   @relation(fields: [moduleId], references: [id])
+  pageNumber Int
+  width      Float // in PDF points, from the original page
+  height     Float
+  pdfType    ModulePdfType @default(UNKNOWN) // per-page, since a module can be hybrid
+
+  // High-res rendered reference image of the original page (spec ┬º7 ΓÇö the
+  // "Original Reference Layer" every editable layer is positioned over).
+  referenceImageUrl String?
+
+  // Structured elements for this page ΓÇö array of the JSON shape described
+  // in spec ┬º8/┬º9. Validate shape at the application layer (Zod) rather
+  // than in the DB.
+  elements Json @default("[]")
+
+  ocrConfidence Float? // 0-1, null if page had no OCR pass (pure digital page)
+  needsReview   Boolean @default(false)
+  warnings      Json    @default("[]") // array of { type, message } ΓÇö spec ┬º29/┬º30
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([moduleId, pageNumber])
+}
+
+// Every image/diagram/table-as-image extracted from a module, stored once
+// and referenced by asset id from page elements (spec ┬º8, ┬º16, ┬º35).
+model ModuleAsset {
+  id          String   @id @default(uuid())
+  moduleId    String
+  module      Module   @relation(fields: [moduleId], references: [id])
+  storageUrl  String
+  mimeType    String
+  width       Int?
+  height      Int?
+  sourcePage  Int? // page it was extracted from, for traceability
+  createdAt   DateTime @default(now())
+}
+
+// Snapshots of a module's full page/element state, so edits are never
+// destructive and old states can be restored (spec ┬º34).
+model ModuleVersion {
+  id        String   @id @default(uuid())
+  moduleId  String
+  module    Module   @relation(fields: [moduleId], references: [id])
+  label     String // "Imported" | "Branding Updated" | "Page 17 Edited" | "Final Export" | custom
+  snapshot  Json // full { pages: [...] } state at save time
+  createdById String?
+  createdAt DateTime @default(now())
+}
+
+// A reusable Atomic Pathshala brand kit (spec ┬º19) ΓÇö logo, colors, header/
+// footer/watermark templates. Modules reference one; templates aren't
+// duplicated per module.
+model BrandProfile {
+  id            String   @id @default(uuid())
+  name          String
+  logoUrl       String?
+  primaryColor  String?
+  secondaryColor String?
+  fontFamily    String?
+  websiteUrl    String?
+  tagline       String?
+  headerConfig  Json @default("{}")
+  footerConfig  Json @default("{}")
+  watermarkConfig Json @default("{}")
+  isDefault     Boolean @default(false)
+
+  createdById String?
+  createdBy   User?    @relation("BrandProfileCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  modules Module[]
+}
+
+// Tracks a single background processing run for a module (spec ┬º41). A
+// module can have several over its lifetime (re-processing after a failure,
+// re-OCR of a specific page range, etc).
+model ProcessingJob {
+  id           String          @id @default(uuid())
+  moduleId     String
+  module       Module          @relation(fields: [moduleId], references: [id])
+  stage        ProcessingStage @default(UPLOADING)
+  progress     Int             @default(0) // 0-100
+  errorMessage String?
+  startedAt    DateTime        @default(now())
+  finishedAt   DateTime?
+}
+
+// A completed branded PDF export (spec ┬º32, ┬º49). The file itself lives in
+// storage; this row is the history entry + download pointer.
+model ModuleExport {
+  id           String   @id @default(uuid())
+  moduleId     String
+  module       Module   @relation(fields: [moduleId], references: [id])
+  versionId    String?
+  fileUrl      String
+  fileName     String
+  fileSize     Int
+  quality      String   @default("STANDARD") // "STANDARD" | "HIGH" | "PRINT"
+  includedFrontPage Boolean @default(true)
+  includedWatermark Boolean @default(false)
+  createdById  String?
+  createdAt    DateTime @default(now())
+}

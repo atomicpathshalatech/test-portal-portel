@@ -83,7 +83,7 @@ export default function AdminDppListPage() {
           dpps.map((d) => {
             const added = d.questions.length;
             return (
-              <div key={d.id} className="card hover:shadow-md transition-shadow">
+              <div key={d.id} className="card hover:shadow-md transition-shadow duration-300 ease-out">
                 <div className="flex items-start justify-between mb-2">
                   <span className="text-xs font-mono text-brand">{d.code}</span>
                   <div className="flex items-center gap-1">
@@ -106,10 +106,10 @@ export default function AdminDppListPage() {
                 </Link>
                 {d.status === "PUBLISHED" && (
                   <div className="flex gap-2 text-xs">
-                    <a href={`/api/dpps/${d.id}/export-pdf`} className="text-brand underline flex-1 text-center">
+                    <a href={`/api/dpps/${d.id}/export-pdf`} className="text-brand underline flex-1 text-center hover:opacity-70 transition-opacity duration-150">
                       Without Solutions
                     </a>
-                    <a href={`/api/dpps/${d.id}/export-pdf?withSolutions=true`} className="text-success underline flex-1 text-center">
+                    <a href={`/api/dpps/${d.id}/export-pdf?withSolutions=true`} className="text-success underline flex-1 text-center hover:opacity-70 transition-opacity duration-150">
                       With Solutions
                     </a>
                   </div>

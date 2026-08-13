@@ -9,6 +9,7 @@ const BASE_LINKS: NavItem[] = [{ href: "/admin", label: "Dashboard", icon: "dash
 
 const MANAGER_LINKS_TOP: NavItem[] = [
   { href: "/admin/users", label: "User Management", icon: "group" },
+  { href: "/admin/students", label: "Student Registrations", icon: "school" },
   { href: "/admin/test-series", label: "Test Series", icon: "collections_bookmark" },
   { href: "/admin/test-templates", label: "Test Templates", icon: "content_copy" },
 ];
@@ -33,8 +34,8 @@ function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
       href={item.href}
-      className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all ${
-        active ? "bg-white/15 text-white font-semibold" : "text-white/70 hover:bg-white/10 hover:text-white"
+      className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all duration-150 ${
+        active ? "bg-white/15 text-white font-semibold" : "text-white/70 hover:bg-white/10 hover:text-white hover:translate-x-0.5"
       }`}
     >
       <span className="material-symbols-outlined text-lg">{item.icon}</span>
@@ -78,7 +79,7 @@ export default function AdminNav({ manager }: { manager: boolean }) {
 
       <div className="h-px bg-white/10 my-3 mx-3" />
       <NavLink item={{ href: "/profile", label: "My Profile", icon: "account_circle" }} active={isActive("/profile")} />
-      <LogoutButton className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm w-full text-left text-white/70 hover:bg-white/10 hover:text-white transition-all" />
+      <LogoutButton className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm w-full text-left text-white/70 hover:bg-white/10 hover:text-white hover:translate-x-0.5 transition-all duration-150" />
     </nav>
   );
 }

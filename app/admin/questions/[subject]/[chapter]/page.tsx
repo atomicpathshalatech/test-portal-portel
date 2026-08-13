@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
+import DeleteQuestionButton from "@/components/DeleteQuestionButton";
 
 export default async function ChapterQuestionsPage({
   params,
@@ -95,12 +96,21 @@ export default async function ChapterQuestionsPage({
                   <td className="py-2 pr-4">{q.translations.map((t) => t.language.toUpperCase()).join(" + ")}</td>
                   <td className="py-2 pr-4 text-slate-500">{preview}...</td>
                   <td className="py-2 pr-4">
-                    <Link href={`/admin/questions/new?edit=${q.id}`} className="text-brand text-xs underline mr-2">
-                      Edit
-                    </Link>
-                    <Link href={`/admin/questions/versions/${q.id}`} className="text-purple-600 text-xs underline">
-                      History
-                    </Link>
+                    <Link
+  href={`/admin/questions/new?edit=${q.id}`}
+  className="text-brand text-xs underline mr-2 hover:opacity-70 transition-opacity duration-150"
+>
+  Edit
+</Link>
+
+<Link
+  href={`/admin/questions/versions/${q.id}`}
+  className="text-purple-600 text-xs underline mr-2 hover:opacity-70 transition-opacity duration-150"
+>
+  History
+</Link>
+
+<DeleteQuestionButton questionId={q.id} />
                   </td>
                 </tr>
               );

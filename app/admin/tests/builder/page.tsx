@@ -318,6 +318,7 @@ export default function TestBuilderPage() {
                   <select className="input" value={s.subject} onChange={(e) => updateSection(idx, { subject: e.target.value })}>
                     <option>Physics</option>
                     <option>Chemistry</option>
+                    <option>Biology</option>
                     <option>Botany</option>
                     <option>Zoology</option>
                   </select>
@@ -344,7 +345,7 @@ export default function TestBuilderPage() {
                 </div>
                 <div className="col-span-2 flex justify-end">
                   {sections.length > 1 && (
-                    <button type="button" onClick={() => removeSection(idx)} className="text-danger text-xs">
+                    <button type="button" onClick={() => removeSection(idx)} className="text-danger text-xs hover:underline transition-all duration-150">
                       Remove
                     </button>
                   )}

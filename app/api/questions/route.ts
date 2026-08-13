@@ -16,9 +16,14 @@ export async function GET(req: NextRequest) {
   // regardless of what's requested in the query string.
   const subject = session?.role === "TEACHER" ? session.subject || "__none__" : subjectParam;
 
+  // "Biology" isn't a real stored subject (see lib/syllabusData.ts) — it's a
+  // test-building convenience that covers Botany + Zoology together.
+  const subjectFilter =
+    subject === "Biology" ? { in: ["Botany", "Zoology"] } : subject ? { equals: subject } : undefined;
+
   const questions = await prisma.question.findMany({
     where: {
-      subject: subject || undefined,
+      subject: subjectFilter,
       difficulty: (difficulty as any) || undefined,
       questionCode: code ? code.trim().toUpperCase() : undefined,
     },

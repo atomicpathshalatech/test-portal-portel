@@ -73,8 +73,8 @@ export default function StudentSeriesPage() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`pb-3 text-sm font-medium capitalize ${
-              tab === t ? "border-b-2 border-brand text-brand" : "text-ink-soft"
+            className={`pb-3 text-sm font-medium capitalize transition-colors duration-150 ${
+              tab === t ? "border-b-2 border-brand text-brand" : "text-ink-soft hover:text-ink"
             }`}
           >
             {t}

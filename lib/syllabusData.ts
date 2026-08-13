@@ -370,3 +370,29 @@ export const SYLLABUS: Taxonomy = {
     "Human Health and Disease": ["Immunity", "Vaccination", "Allergies", "AIDS", "Cancer", "Drugs and Alcohol Abuse"],
   },
 };
+
+// A combined "Biology" view for test-building convenience — NEET's actual
+// exam paper presents one Biology section (not separate Botany/Zoology
+// sections), so test builders can pick a single "Biology" section instead
+// of manually adding two. This is purely a UI-level merge: every chapter
+// here still belongs to either Botany or Zoology underneath (see
+// resolveBiologySubject below), so individual questions keep saving under
+// their real subject and nothing about Question Bank browsing, DPPs, or
+// Teacher subject permissions (all still Physics/Chemistry/Botany/Zoology)
+// needs to change.
+SYLLABUS.Biology = { ...SYLLABUS.Botany, ...SYLLABUS.Zoology };
+
+// Chapter names don't collide between Botany and Zoology (verified against
+// the taxonomy above), so a chapter unambiguously identifies its real
+// subject. Given a section subject and a chosen chapter, returns the actual
+// subject a Question row should be saved under. For any subject other than
+// "Biology" this is just a no-op passthrough.
+export function resolveBiologySubject(sectionSubject: string, chapter: string): string {
+  if (sectionSubject !== "Biology") return sectionSubject;
+  if (SYLLABUS.Botany[chapter]) return "Botany";
+  if (SYLLABUS.Zoology[chapter]) return "Zoology";
+  // Chapter not recognized (e.g. a legacy/custom chapter) — default to
+  // Botany rather than saving an unresolvable "Biology" subject that
+  // wouldn't match anything in the Question Bank's subject filters.
+  return "Botany";
+}

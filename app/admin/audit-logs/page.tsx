@@ -62,7 +62,7 @@ export default function AuditLogsPage() {
       <p className="text-slate-500 text-sm mb-6">
         {entityId ? (
           <>
-            Showing history for one item only. <Link href="/admin/audit-logs" className="text-brand underline">View all logs →</Link>
+            Showing history for one item only. <Link href="/admin/audit-logs" className="text-brand underline hover:opacity-70 transition-opacity duration-150">View all logs →</Link>
           </>
         ) : (
           "Every significant action across the system — who did what, and when."

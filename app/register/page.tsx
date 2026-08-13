@@ -4,6 +4,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import PhotoCropUpload from "@/components/PhotoCropUpload";
 import PasswordInput from "@/components/PasswordInput";
+import { INDIAN_STATES, CITIES_BY_STATE, STUDENT_CATEGORIES, STUDENT_SUB_CATEGORIES } from "@/lib/locationData";
+
+const OTHER = "__other__";
 
 const POLICY_CHECKS = [
   { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
@@ -16,9 +19,15 @@ const POLICY_CHECKS = [
 export default function RegisterPage() {
   const router = useRouter();
   const [form, setForm] = useState({
-    name: "", mobile: "", email: "", dateOfBirth: "", gender: "", state: "", city: "", course: "",
+    name: "", mobile: "", email: "", dateOfBirth: "", gender: "", state: "", city: "",
+    category: "", subCategory: "None", course: "",
     password: "", confirmPassword: "",
   });
+  // "list" = picked from the dropdown; "other" = typing a custom value not
+  // in our predefined list. Kept separate from form.state/form.city so the
+  // <select> doesn't lose its "Other" selection once they start typing.
+  const [stateMode, setStateMode] = useState<"list" | "other">("list");
+  const [cityMode, setCityMode] = useState<"list" | "other">("list");
   const [photoBlob, setPhotoBlob] = useState<Blob | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -27,6 +36,28 @@ export default function RegisterPage() {
   const passwordChecks = POLICY_CHECKS.map((c) => ({ ...c, passed: c.test(form.password) }));
   const passwordValid = passwordChecks.every((c) => c.passed);
   const passwordsMatch = form.password && form.password === form.confirmPassword;
+  const citiesForState = CITIES_BY_STATE[form.state] || [];
+
+  function handleStateSelect(value: string) {
+    if (value === OTHER) {
+      setStateMode("other");
+      setForm({ ...form, state: "", city: "" });
+    } else {
+      setStateMode("list");
+      setCityMode("list");
+      setForm({ ...form, state: value, city: "" });
+    }
+  }
+
+  function handleCitySelect(value: string) {
+    if (value === OTHER) {
+      setCityMode("other");
+      setForm({ ...form, city: "" });
+    } else {
+      setCityMode("list");
+      setForm({ ...form, city: value });
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -124,11 +155,91 @@ export default function RegisterPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="label">State</label>
-              <input className="input" required value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} />
+              <select
+                className="input"
+                required
+                value={stateMode === "other" ? OTHER : form.state}
+                onChange={(e) => handleStateSelect(e.target.value)}
+              >
+                <option value="">Select...</option>
+                {INDIAN_STATES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+                <option value={OTHER}>Other</option>
+              </select>
+              {stateMode === "other" && (
+                <input
+                  className="input mt-2"
+                  required
+                  autoFocus
+                  placeholder="Enter your state"
+                  value={form.state}
+                  onChange={(e) => setForm({ ...form, state: e.target.value })}
+                />
+              )}
             </div>
             <div>
               <label className="label">City</label>
-              <input className="input" required value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+              {stateMode === "other" ? (
+                // No predefined city list for a custom state — just take free text.
+                <input
+                  className="input"
+                  required
+                  placeholder="Enter your city"
+                  value={form.city}
+                  onChange={(e) => setForm({ ...form, city: e.target.value })}
+                />
+              ) : (
+                <>
+                  <select
+                    className="input"
+                    required
+                    disabled={!form.state}
+                    value={cityMode === "other" ? OTHER : form.city}
+                    onChange={(e) => handleCitySelect(e.target.value)}
+                  >
+                    <option value="">{form.state ? "Select..." : "Select state first"}</option>
+                    {citiesForState.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                    {form.state && <option value={OTHER}>Other</option>}
+                  </select>
+                  {cityMode === "other" && (
+                    <input
+                      className="input mt-2"
+                      required
+                      autoFocus
+                      placeholder="Enter your city"
+                      value={form.city}
+                      onChange={(e) => setForm({ ...form, city: e.target.value })}
+                    />
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Category</label>
+              <select className="input" required value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                <option value="">Select...</option>
+                {STUDENT_CATEGORIES.map((c) => (
+                  <option key={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label">Sub-category</label>
+              <select className="input" value={form.subCategory} onChange={(e) => setForm({ ...form, subCategory: e.target.value })}>
+                {STUDENT_SUB_CATEGORIES.map((c) => (
+                  <option key={c}>{c}</option>
+                ))}
+              </select>
             </div>
           </div>
 

@@ -59,7 +59,7 @@ export default async function SecurityCenterPage() {
                     </td>
                     <td className="py-2 pr-4">{a.status.replace("_", " ")}</td>
                     <td className="py-2 pr-4">
-                      <Link href={`/admin/security/${a.id}`} className="text-brand text-sm font-medium">
+                      <Link href={`/admin/security/${a.id}`} className="text-brand text-sm font-medium hover:opacity-70 transition-opacity duration-150">
                         View Timeline →
                       </Link>
                     </td>

@@ -32,7 +32,7 @@ export default async function TestSeriesListPage() {
             <Link
               key={s.id}
               href={`/admin/test-series/${s.id}`}
-              className="card flex items-center gap-4 hover:shadow-md transition-shadow"
+              className="card-interactive flex items-center gap-4"
             >
               {s.thumbnailUrl ? (
                 <img src={s.thumbnailUrl} alt="" className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />

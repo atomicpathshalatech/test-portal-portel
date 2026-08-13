@@ -43,7 +43,7 @@ export default function BrandingPanel({
     <div className="bg-white border border-slate-200 rounded-2xl p-4 mb-8">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-sm font-semibold text-slate-700">Branding</h2>
-        <Link href="/admin/module-studio/brand-settings" className="text-xs text-indigo-600">
+        <Link href="/admin/module-studio/brand-settings" className="text-xs text-indigo-600 hover:underline transition-all duration-150">
           Manage brand profiles
         </Link>
       </div>
@@ -51,7 +51,7 @@ export default function BrandingPanel({
       {profiles.length === 0 ? (
         <p className="text-sm text-slate-400">
           No brand profiles yet —{" "}
-          <Link href="/admin/module-studio/brand-settings" className="text-indigo-600">
+          <Link href="/admin/module-studio/brand-settings" className="text-indigo-600 hover:underline transition-all duration-150">
             create one
           </Link>
           .

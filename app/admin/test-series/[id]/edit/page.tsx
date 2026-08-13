@@ -98,7 +98,7 @@ export default function EditTestSeriesPage() {
               <button
                 type="button"
                 onClick={() => setThumbnailUrl(null)}
-                className="absolute -top-2 -right-2 bg-danger text-white rounded-full w-6 h-6 text-xs font-bold"
+                className="absolute -top-2 -right-2 bg-danger text-white rounded-full w-6 h-6 text-xs font-bold hover:scale-110 active:scale-90 transition-transform duration-150"
               >
                 ✕
               </button>

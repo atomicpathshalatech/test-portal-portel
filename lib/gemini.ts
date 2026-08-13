@@ -197,11 +197,46 @@ export function parseJsonResponse<T>(raw: string): T {
     .replace(/```\s*$/i, "")
     .trim();
 
+  // Always repair first, rather than only as a catch-fallback after a failed
+  // JSON.parse. This matters because \r and \t are individually VALID JSON
+  // escapes — an unescaped LaTeX "\theta" or "\rho" doesn't make JSON.parse
+  // throw at all, it silently "succeeds" while corrupting the text (turning
+  // \t into an actual tab character, dropping the "heta"). A catch-only
+  // repair pass would never even run in that case. repairJsonEscaping is a
+  // no-op on input the model already escaped correctly, so this is safe.
   try {
-    return JSON.parse(cleaned) as T;
-  } catch {
     return JSON.parse(repairJsonEscaping(cleaned)) as T;
+  } catch (repairedErr) {
+    try {
+      return JSON.parse(cleaned) as T;
+    } catch {
+      // If the cleaned text doesn't end with a closing brace/bracket, the
+      // response was almost certainly cut off mid-generation (hit the
+      // maxOutputTokens cap) rather than malformed — surface a clearer,
+      // actionable error instead of the raw "Unterminated string" message.
+      const looksTruncated = !/[}\]]\s*$/.test(cleaned);
+      if (looksTruncated) {
+        throw new Error(
+          "The AI response was cut off before it finished (likely too long for the token limit). Try generating fewer questions at once, or a shorter/simpler request."
+        );
+      }
+      throw repairedErr;
+    }
   }
+}
+
+// Only these are UNAMBIGUOUS JSON escapes: a doubled backslash, an escaped
+// quote/slash, or a \uXXXX unicode escape. Deliberately excluding \b \f \n
+// \r \t here — those letters are also the first letter of extremely common
+// LaTeX commands (\beta, \frac/\forall, \nu/\nabla, \rho, \tan/\tau/\theta),
+// so treating "\t" as a literal tab escape silently mangles "\theta" into a
+// tab character followed by "heta". Any bare backslash followed by a letter
+// is far more likely to be an unescaped LaTeX command than an intentional
+// control-character escape, so those always get doubled below instead.
+function isUnambiguousEscape(next: string, input: string, i: number): boolean {
+  if (next === '"' || next === "\\" || next === "/") return true;
+  if (next === "u") return /^[0-9a-fA-F]{4}/.test(input.slice(i + 2, i + 6));
+  return false;
 }
 
 function repairJsonEscaping(input: string): string {
@@ -219,18 +254,18 @@ function repairJsonEscaping(input: string): string {
     if (inString) {
       if (ch === "\\") {
         const next = input[i + 1];
-        if (next && '"\\/bfnrtu'.includes(next)) {
-          // Valid 2-character escape (e.g. \\, \n, \t, \u...) — consume BOTH
-          // characters now so the next loop iteration doesn't re-examine
-          // `next` as if it were a fresh, independent character. Without
-          // this, a correctly-escaped "\\alpha" (backslash-backslash-alpha,
-          // meaning one literal backslash) gets mangled into three
-          // backslashes because the second backslash gets treated as a new
-          // stray escape on the following iteration.
+        if (next && isUnambiguousEscape(next, input, i)) {
+          // Valid escape (e.g. \\, \", \/, \uXXXX) — consume BOTH characters
+          // now so the next loop iteration doesn't re-examine `next` as if
+          // it were a fresh, independent character. Without this, a
+          // correctly-escaped "\\alpha" (backslash-backslash-alpha, meaning
+          // one literal backslash) gets mangled into three backslashes
+          // because the second backslash gets treated as a new stray escape
+          // on the following iteration.
           result += ch + next;
           i++;
         } else {
-          result += "\\\\"; // stray backslash (e.g. from \frac, \beta, \(, \)) — escape it
+          result += "\\\\"; // stray backslash (e.g. from \frac, \theta, \(, \)) — escape it
         }
         continue;
       }

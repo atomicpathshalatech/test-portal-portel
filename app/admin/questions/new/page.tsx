@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import FormulaEditor from "@/components/FormulaEditor";
 import FormulaText from "@/components/FormulaText";
-import { SYLLABUS } from "@/lib/syllabusData";
+import { SYLLABUS, resolveBiologySubject } from "@/lib/syllabusData";
 
 type OptionRow = { id: string; text: string };
 type LangContent = { statement: string; options: OptionRow[]; correctOptionIds: string[]; solution: string };
@@ -74,6 +74,7 @@ export default function NewQuestionPage() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [error, setError] = useState("");
+  const [extractingScreenshot, setExtractingScreenshot] = useState(false);
   const [isPublishedQuestion, setIsPublishedQuestion] = useState(false);
   const [editReason, setEditReason] = useState("");
   const [loading, setLoading] = useState(false);
@@ -179,6 +180,75 @@ export default function NewQuestionPage() {
     e.target.value = "";
   }
 
+  // Paste a screenshot (Ctrl+V) of a question and have AI extract the
+  // statement/options into the form — same feature as the test/DPP question
+  // builders, wired to this page's separate hi/en state instead of a single
+  // combined form object.
+  async function handleScreenshotPaste(e: React.ClipboardEvent<HTMLDivElement>) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    let file: File | null = null;
+    for (const item of Array.from(items)) {
+      if (item.type.startsWith("image/")) {
+        file = item.getAsFile();
+        break;
+      }
+    }
+    if (!file) return;
+    e.preventDefault();
+
+    setExtractingScreenshot(true);
+    setAiError("");
+    try {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(",")[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file!);
+      });
+
+      const res = await fetch("/api/ai/extract-question", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: base64, mimeType: file.type }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAiError(data.message || "Couldn't extract a question from that screenshot.");
+        return;
+      }
+
+      if (data.isIntegerType) {
+        setMeta((m) => ({ ...m, type: "INTEGER" }));
+      }
+      if (data.statement_en) {
+        setEn({
+          statement: data.statement_en,
+          options: data.isIntegerType ? [] : data.options_en || en.options,
+          correctOptionIds: data.isIntegerType ? [""] : [],
+          solution: en.solution,
+        });
+        setEnableEn(true);
+      }
+      if (data.statement_hi) {
+        setHi({
+          statement: data.statement_hi,
+          options: data.isIntegerType ? [] : data.options_hi || hi.options,
+          correctOptionIds: data.isIntegerType ? [""] : [],
+          solution: hi.solution,
+        });
+        setEnableHi(true);
+      }
+      if (data.hasImage) {
+        setAiError(
+          "⚠️ This screenshot appears to contain a diagram/figure — text was extracted, but please upload that image separately using the field below."
+        );
+      }
+    } finally {
+      setExtractingScreenshot(false);
+    }
+  }
+
   const current = activeLang === "hi" ? hi : en;
   const setCurrent = activeLang === "hi" ? setHi : setEn;
 
@@ -250,11 +320,17 @@ export default function NewQuestionPage() {
     if (enableHi) translations.hi = hi;
     if (enableEn) translations.en = en;
 
+    // "Biology" is only a section-level convenience label (see
+    // lib/syllabusData.ts) — the Question row itself must always save under
+    // its real subject (Botany/Zoology) so Question Bank browsing, DPPs,
+    // and Teacher subject permissions keep working unchanged.
+    const payloadMeta = { ...meta, subject: resolveBiologySubject(meta.subject, meta.chapter) };
+
     if (editId) {
       const res = await fetch(`/api/questions/${editId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...meta, translations, imageUrl, reason: editReason }),
+        body: JSON.stringify({ ...payloadMeta, translations, imageUrl, reason: editReason }),
       });
       setLoading(false);
       if (!res.ok) {
@@ -269,7 +345,7 @@ export default function NewQuestionPage() {
     const res = await fetch("/api/questions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...meta, translations, imageUrl }),
+      body: JSON.stringify({ ...payloadMeta, translations, imageUrl }),
     });
     setLoading(false);
     if (!res.ok) {
@@ -294,6 +370,13 @@ export default function NewQuestionPage() {
       return;
     }
 
+    // "Biology" was resolved to the question's real subject for saving, but
+    // `meta` still holds "Biology" — update it too so the success screen's
+    // "Done"/"Add Another" buttons (which use meta.subject/backLink) point
+    // to a real, browsable Question Bank subject instead of a dead route.
+    if (meta.subject === "Biology") {
+      setMeta((m) => ({ ...m, subject: payloadMeta.subject }));
+    }
     setCreatedCode(created.questionCode);
   }
 
@@ -379,6 +462,7 @@ export default function NewQuestionPage() {
             >
               <option>Physics</option>
               <option>Chemistry</option>
+              <option>Biology</option>
               <option>Botany</option>
               <option>Zoology</option>
             </select>
@@ -547,6 +631,20 @@ export default function NewQuestionPage() {
           )}
         </div>
 
+        <div
+          onPaste={handleScreenshotPaste}
+          tabIndex={0}
+          className="card border-2 border-dashed border-brand/30 text-center bg-brand-light/30 transition-colors duration-150 focus:outline-none focus:border-brand/60 cursor-text"
+        >
+          {extractingScreenshot ? (
+            <p className="text-sm text-brand font-medium">⏳ Reading question from screenshot...</p>
+          ) : (
+            <p className="text-sm text-ink-soft">
+              📋 Click here and paste (Ctrl+V) a screenshot — statement &amp; options will auto-fill
+            </p>
+          )}
+        </div>
+
         <div className="card">
           <label className="label">Question Image / Diagram (optional, shared across languages)</label>
           {imageUrl ? (
@@ -555,7 +653,7 @@ export default function NewQuestionPage() {
               <button
                 type="button"
                 onClick={() => setImageUrl(null)}
-                className="absolute -top-2 -right-2 bg-danger text-white rounded-full w-6 h-6 text-xs font-bold"
+                className="absolute -top-2 -right-2 bg-danger text-white rounded-full w-6 h-6 text-xs font-bold hover:scale-110 active:scale-90 transition-transform duration-150"
               >
                 ✕
               </button>
@@ -594,8 +692,8 @@ export default function NewQuestionPage() {
               <button
                 type="button"
                 onClick={() => setActiveLang("hi")}
-                className={`px-4 py-2 text-sm font-medium border-b-2 ${
-                  activeLang === "hi" ? "border-brand text-brand" : "border-transparent text-slate-500"
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors duration-150 ${
+                  activeLang === "hi" ? "border-brand text-brand" : "border-transparent text-slate-500 hover:text-ink"
                 }`}
               >
                 हिंदी
@@ -605,8 +703,8 @@ export default function NewQuestionPage() {
               <button
                 type="button"
                 onClick={() => setActiveLang("en")}
-                className={`px-4 py-2 text-sm font-medium border-b-2 ${
-                  activeLang === "en" ? "border-brand text-brand" : "border-transparent text-slate-500"
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors duration-150 ${
+                  activeLang === "en" ? "border-brand text-brand" : "border-transparent text-slate-500 hover:text-ink"
                 }`}
               >
                 English
@@ -646,10 +744,10 @@ export default function NewQuestionPage() {
                       <button
                         type="button"
                         onClick={() => toggleCorrect(opt.id)}
-                        className={`w-8 h-8 rounded-full text-sm font-semibold flex-shrink-0 mt-0 ${
+                        className={`w-8 h-8 rounded-full text-sm font-semibold flex-shrink-0 mt-0 active:scale-90 transition-all duration-150 ${
                           current.correctOptionIds.includes(opt.id)
-                            ? "bg-success text-white"
-                            : "bg-slate-100 text-slate-500"
+                            ? "bg-success text-white shadow-sm"
+                            : "bg-slate-100 text-slate-500 hover:bg-slate-200"
                         }`}
                       >
                         {opt.id}
@@ -680,7 +778,7 @@ export default function NewQuestionPage() {
               type="button"
               onClick={handleAiSolve}
               disabled={aiSolving}
-              className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200 whitespace-nowrap"
+              className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200 active:scale-95 transition-all duration-150 whitespace-nowrap"
             >
               {aiSolving ? "Thinking..." : "✨ Solve with AI"}
             </button>

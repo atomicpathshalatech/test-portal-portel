@@ -5,7 +5,7 @@ import Link from "next/link";
 import FormulaEditor from "@/components/FormulaEditor";
 import FormulaText from "@/components/FormulaText";
 import Combobox from "@/components/Combobox";
-import { SYLLABUS } from "@/lib/syllabusData";
+import { SYLLABUS, resolveBiologySubject } from "@/lib/syllabusData";
 
 type OptionRow = { id: string; text: string };
 type LangContent = { statement: string; options: OptionRow[]; correctOptionIds: string[]; solution: string };
@@ -252,7 +252,7 @@ export default function UnifiedQuestionAuthoringPage() {
     if (form.enableEn) translations.en = form.en;
 
     const payload = {
-      subject: activeSection.subject,
+      subject: resolveBiologySubject(activeSection.subject, form.chapter),
       chapter: form.chapter,
       topic: form.topic,
       subTopic: form.subTopic,
@@ -418,7 +418,7 @@ export default function UnifiedQuestionAuthoringPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        subject: activeSection.subject,
+        subject: resolveBiologySubject(activeSection.subject, form.chapter),
         chapter: form.chapter,
         topic: form.topic,
         statement: langData.statement,
@@ -696,10 +696,10 @@ export default function UnifiedQuestionAuthoringPage() {
           ${sectionSidebarOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
       >
         <div className="p-4 flex items-center justify-between gap-2">
-          <Link href="/admin/tests" className="text-white/70 hover:text-white text-sm">
+          <Link href="/admin/tests" className="text-white/70 hover:text-white text-sm transition-colors duration-150">
             ← Back
           </Link>
-          <button onClick={() => setSectionSidebarOpen(false)} className="md:hidden text-white/70 w-8 h-8 flex items-center justify-center">
+          <button onClick={() => setSectionSidebarOpen(false)} className="md:hidden text-white/70 hover:text-white active:scale-90 transition-all duration-150 w-8 h-8 flex items-center justify-center">
             <span className="material-symbols-outlined text-lg">close</span>
           </button>
         </div>
@@ -722,7 +722,7 @@ export default function UnifiedQuestionAuthoringPage() {
                   setSectionSidebarOpen(false);
                 }}
                 disabled={showMetadataGate}
-                className={`w-full text-left px-3 py-2.5 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${active ? "bg-white/15" : "hover:bg-white/5"}`}
+                className={`w-full text-left px-3 py-2.5 rounded-xl transition-all duration-150 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100 ${active ? "bg-white/15" : "hover:bg-white/5"}`}
               >
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium">{sec.name}</span>
@@ -742,7 +742,7 @@ export default function UnifiedQuestionAuthoringPage() {
         {/* Top bar */}
         <div className="bg-white border-b px-3 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <button onClick={() => setSectionSidebarOpen(true)} className="md:hidden w-8 h-8 flex items-center justify-center flex-shrink-0 -ml-1">
+            <button onClick={() => setSectionSidebarOpen(true)} className="md:hidden w-8 h-8 flex items-center justify-center flex-shrink-0 -ml-1 active:scale-90 transition-transform duration-150">
               <span className="material-symbols-outlined text-slate-600">menu</span>
             </button>
             <span className="font-semibold text-slate-800 truncate max-w-[100px] sm:max-w-none">{activeSection.name}</span>
@@ -765,7 +765,7 @@ export default function UnifiedQuestionAuthoringPage() {
                 हिंदी + English — side by side
               </span>
             )}
-            <button onClick={() => setDrawerOpen(true)} className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center flex-shrink-0">
+            <button onClick={() => setDrawerOpen(true)} className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 active:scale-90 transition-all duration-150 flex items-center justify-center flex-shrink-0">
               <span className="material-symbols-outlined text-slate-600 text-lg">tune</span>
             </button>
           </div>
@@ -785,10 +785,10 @@ export default function UnifiedQuestionAuthoringPage() {
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs text-slate-400 font-mono">Q.{activeSlot}</span>
             <div className="flex gap-2">
-              <button onClick={openBank} className="text-xs px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200">
+              <button onClick={openBank} className="text-xs px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 active:scale-95 transition-all duration-150">
                 🏦 Import from Bank
               </button>
-              <button onClick={openPrevious} className="text-xs px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200">
+              <button onClick={openPrevious} className="text-xs px-3 py-1.5 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 active:scale-95 transition-all duration-150">
                 🔁 Import from Previous Test
               </button>
             </div>
@@ -812,7 +812,7 @@ export default function UnifiedQuestionAuthoringPage() {
           {form.imageUrl && (
             <div className="mb-4 relative inline-block">
               <img src={form.imageUrl} alt="" className="max-h-48 rounded-lg border" />
-              <button onClick={() => setForm({ ...form, imageUrl: null })} className="absolute -top-2 -right-2 bg-danger text-white rounded-full w-6 h-6 text-xs">
+              <button onClick={() => setForm({ ...form, imageUrl: null })} className="absolute -top-2 -right-2 bg-danger text-white rounded-full w-6 h-6 text-xs hover:scale-110 active:scale-90 transition-transform duration-150">
                 ✕
               </button>
             </div>
@@ -830,7 +830,7 @@ export default function UnifiedQuestionAuthoringPage() {
               <button
                 onClick={handleAutoTranslate}
                 disabled={autoTranslating}
-                className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200"
+                className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200 active:scale-95 transition-all duration-150"
               >
                 {autoTranslating ? "Translating..." : `🌐 Auto-Translate to ${form.enableHi ? "English" : "Hindi"}`}
               </button>
@@ -841,7 +841,7 @@ export default function UnifiedQuestionAuthoringPage() {
                 <button
                   onClick={handleCheckTranslation}
                   disabled={checkingTranslation}
-                  className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200"
+                  className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200 active:scale-95 transition-all duration-150"
                 >
                   {checkingTranslation ? "Checking..." : "🔍 AI Check Hindi Translation"}
                 </button>
@@ -863,7 +863,7 @@ export default function UnifiedQuestionAuthoringPage() {
               {translationCheck?.improvedHindiStatement && (
                 <button
                   onClick={applyImprovedHindi}
-                  className="text-xs text-brand underline self-start"
+                  className="text-xs text-brand underline self-start hover:opacity-70 transition-opacity duration-150"
                 >
                   ✓ Apply AI's improved Hindi (NCERT terminology)
                 </button>
@@ -907,12 +907,12 @@ export default function UnifiedQuestionAuthoringPage() {
                         {langData.options.map((opt, idx) => {
                           const isCorrect = langData.correctOptionIds.includes(opt.id);
                           return (
-                            <div key={opt.id} className={`card relative ${isCorrect ? "border-2 border-success" : ""}`}>
+                            <div key={opt.id} className={`card relative transition-all duration-150 ${isCorrect ? "border-2 border-success" : ""}`}>
                               <div className="flex items-start gap-2">
                                 <button
                                   onClick={() => toggleCorrectFor(lang, opt.id)}
-                                  className={`w-7 h-7 rounded-full text-xs font-semibold flex-shrink-0 flex items-center justify-center ${
-                                    isCorrect ? "bg-success text-white" : "bg-slate-100 text-slate-500"
+                                  className={`w-7 h-7 rounded-full text-xs font-semibold flex-shrink-0 flex items-center justify-center active:scale-90 transition-all duration-150 ${
+                                    isCorrect ? "bg-success text-white shadow-sm" : "bg-slate-100 text-slate-500 hover:bg-slate-200"
                                   }`}
                                 >
                                   {opt.id}
@@ -954,7 +954,7 @@ export default function UnifiedQuestionAuthoringPage() {
               type="button"
               onClick={handleAiSolve}
               disabled={aiSolving}
-              className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200 whitespace-nowrap"
+              className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200 active:scale-95 transition-all duration-150 whitespace-nowrap"
             >
               {aiSolving ? "Thinking..." : "✨ Solve with AI (fills solution in each enabled language)"}
             </button>
@@ -973,7 +973,7 @@ export default function UnifiedQuestionAuthoringPage() {
               type="button"
               onClick={() => solutionImageInputRef.current?.click()}
               disabled={extractingSolutionImage}
-              className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200 whitespace-nowrap"
+              className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200 active:scale-95 transition-all duration-150 whitespace-nowrap"
             >
               {extractingSolutionImage ? "Reading image..." : "📷 Upload Solution Image"}
             </button>
@@ -1120,7 +1120,7 @@ export default function UnifiedQuestionAuthoringPage() {
                   key={t.value}
                   type="button"
                   onClick={() => setForm({ ...form, type: t.value })}
-                  className={`text-xs px-3 py-2 rounded-lg border ${form.type === t.value ? "bg-brand text-white border-brand" : "border-slate-200 text-slate-600"}`}
+                  className={`text-xs px-3 py-2 rounded-lg border transition-all duration-150 active:scale-95 ${form.type === t.value ? "bg-brand text-white border-brand shadow-sm" : "border-slate-200 text-slate-600 hover:border-brand/40"}`}
                 >
                   {t.label}
                 </button>
@@ -1134,7 +1134,7 @@ export default function UnifiedQuestionAuthoringPage() {
                   key={d}
                   type="button"
                   onClick={() => setForm({ ...form, difficulty: d })}
-                  className={`text-xs px-3 py-2 rounded-lg border capitalize ${form.difficulty === d ? "bg-brand text-white border-brand" : "border-slate-200 text-slate-600"}`}
+                  className={`text-xs px-3 py-2 rounded-lg border capitalize transition-all duration-150 active:scale-95 ${form.difficulty === d ? "bg-brand text-white border-brand shadow-sm" : "border-slate-200 text-slate-600 hover:border-brand/40"}`}
                 >
                   {d.charAt(0) + d.slice(1).toLowerCase()}
                 </button>
@@ -1147,14 +1147,14 @@ export default function UnifiedQuestionAuthoringPage() {
                 <button
                   type="button"
                   onClick={() => setForm({ ...form, category: "PRACTICE", pyqSource: "" })}
-                  className={`text-xs px-3 py-1.5 rounded-full ${form.category !== "PYQ" ? "bg-brand text-white" : "bg-slate-100 text-slate-500"}`}
+                  className={`text-xs px-3 py-1.5 rounded-full transition-all duration-150 active:scale-95 ${form.category !== "PYQ" ? "bg-brand text-white shadow-sm" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
                 >
                   No
                 </button>
                 <button
                   type="button"
                   onClick={() => setForm({ ...form, category: "PYQ" })}
-                  className={`text-xs px-3 py-1.5 rounded-full ${form.category === "PYQ" ? "bg-brand text-white" : "bg-slate-100 text-slate-500"}`}
+                  className={`text-xs px-3 py-1.5 rounded-full transition-all duration-150 active:scale-95 ${form.category === "PYQ" ? "bg-brand text-white shadow-sm" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
                 >
                   Yes
                 </button>
@@ -1196,7 +1196,7 @@ export default function UnifiedQuestionAuthoringPage() {
           <div className="w-full sm:w-96 bg-white h-full p-6 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-semibold text-slate-900">Question Metadata</h3>
-              <button onClick={() => setDrawerOpen(false)} className="text-slate-400">✕</button>
+              <button onClick={() => setDrawerOpen(false)} className="text-slate-400 hover:text-slate-600 active:scale-90 transition-all duration-150">✕</button>
             </div>
 
             <label className="label text-xs">Subject</label>
@@ -1232,7 +1232,7 @@ export default function UnifiedQuestionAuthoringPage() {
                 <button
                   key={t.value}
                   onClick={() => setForm({ ...form, type: t.value })}
-                  className={`text-xs px-3 py-2 rounded-lg border ${form.type === t.value ? "bg-brand text-white border-brand" : "border-slate-200 text-slate-600"}`}
+                  className={`text-xs px-3 py-2 rounded-lg border transition-all duration-150 active:scale-95 ${form.type === t.value ? "bg-brand text-white border-brand shadow-sm" : "border-slate-200 text-slate-600 hover:border-brand/40"}`}
                 >
                   {t.label}
                 </button>
@@ -1245,7 +1245,7 @@ export default function UnifiedQuestionAuthoringPage() {
                 <button
                   key={d}
                   onClick={() => setForm({ ...form, difficulty: d })}
-                  className={`text-xs px-3 py-2 rounded-lg border capitalize ${form.difficulty === d ? "bg-brand text-white border-brand" : "border-slate-200 text-slate-600"}`}
+                  className={`text-xs px-3 py-2 rounded-lg border capitalize transition-all duration-150 active:scale-95 ${form.difficulty === d ? "bg-brand text-white border-brand shadow-sm" : "border-slate-200 text-slate-600 hover:border-brand/40"}`}
                 >
                   {d.charAt(0) + d.slice(1).toLowerCase()}
                 </button>
@@ -1296,7 +1296,7 @@ export default function UnifiedQuestionAuthoringPage() {
             <p className="text-sm text-slate-500 mb-4">Save your changes before navigating, or discard them.</p>
             <div className="flex gap-2 justify-center">
               <button onClick={() => setPendingNav(null)} className="btn-secondary text-sm">Cancel</button>
-              <button onClick={discardChanges} className="bg-danger text-white px-4 py-2 rounded-lg text-sm">Discard</button>
+              <button onClick={discardChanges} className="bg-danger text-white px-4 py-2 rounded-lg text-sm shadow-sm hover:shadow-md active:scale-[0.97] transition-all duration-150">Discard</button>
               <button onClick={handleSave} className="btn-primary text-sm">Save First</button>
             </div>
           </div>
@@ -1309,7 +1309,7 @@ export default function UnifiedQuestionAuthoringPage() {
           <div className="card w-full max-w-lg max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold">Import from Question Bank — {activeSection.subject}</h3>
-              <button onClick={() => setImportMode("none")} className="text-slate-400">✕</button>
+              <button onClick={() => setImportMode("none")} className="text-slate-400 hover:text-slate-600 active:scale-90 transition-all duration-150">✕</button>
             </div>
             <input className="input mb-3 text-sm" placeholder="Search..." value={bankSearch} onChange={(e) => setBankSearch(e.target.value)} />
             <div className="space-y-1">
@@ -1321,7 +1321,7 @@ export default function UnifiedQuestionAuthoringPage() {
                       <span className="font-mono text-xs text-brand mr-2">{q.questionCode}</span>
                       <FormulaText text={q.translations[0]?.statement?.slice(0, 60) || ""} />
                     </div>
-                    <button onClick={() => importFromBank(q)} className="text-xs bg-brand text-white px-3 py-1 rounded-full ml-2 flex-shrink-0">
+                    <button onClick={() => importFromBank(q)} className="text-xs bg-brand text-white px-3 py-1 rounded-full ml-2 flex-shrink-0 hover:bg-brand-dark active:scale-90 transition-all duration-150">
                       Add
                     </button>
                   </div>
@@ -1337,7 +1337,7 @@ export default function UnifiedQuestionAuthoringPage() {
           <div className="card w-full max-w-lg">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold">Import from Previous Test</h3>
-              <button onClick={() => setImportMode("none")} className="text-slate-400">✕</button>
+              <button onClick={() => setImportMode("none")} className="text-slate-400 hover:text-slate-600 active:scale-90 transition-all duration-150">✕</button>
             </div>
             <select
               className="input"
@@ -1345,14 +1345,22 @@ export default function UnifiedQuestionAuthoringPage() {
                 if (!e.target.value || !activeSection) return;
                 const res = await fetch(`/api/tests/${e.target.value}`);
                 const t: TestData = await res.json();
-                const matchingSection = t.sections.find((s) => s.subject === activeSection.subject);
-                if (!matchingSection) return;
-                for (const sq of matchingSection.questions) {
-                  await fetch(`/api/sections/${activeSection.id}/questions`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ questionId: sq.questionId }),
-                  });
+                // A "Biology" section should pull from whatever the previous
+                // test used — either a combined Biology section, or the
+                // older convention of separate Botany + Zoology sections.
+                const matchingSections =
+                  activeSection.subject === "Biology"
+                    ? t.sections.filter((s) => s.subject === "Biology" || s.subject === "Botany" || s.subject === "Zoology")
+                    : t.sections.filter((s) => s.subject === activeSection.subject);
+                if (matchingSections.length === 0) return;
+                for (const matchingSection of matchingSections) {
+                  for (const sq of matchingSection.questions) {
+                    await fetch(`/api/sections/${activeSection.id}/questions`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ questionId: sq.questionId }),
+                    });
+                  }
                 }
                 setImportMode("none");
                 const fresh = await loadTest();

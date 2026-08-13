@@ -139,7 +139,7 @@ export default function EditDppPage() {
                 key={l.level}
                 type="button"
                 onClick={() => setForm({ ...form, level: form.level === l.level ? null : l.level })}
-                className={`text-left px-4 py-3 rounded-xl border transition-all ${
+                className={`text-left px-4 py-3 rounded-xl border transition-all duration-150 active:scale-[0.99] ${
                   form.level === l.level ? "border-brand bg-brand-light" : "border-slate-200 hover:border-brand/30"
                 }`}
               >

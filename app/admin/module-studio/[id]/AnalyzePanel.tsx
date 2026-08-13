@@ -167,7 +167,7 @@ export default function AnalyzePanel({
               <Link
                 key={p.pageNumber}
                 href={`/admin/module-studio/${moduleId}/${p.pageNumber}`}
-                className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-indigo-400 block"
+                className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-indigo-400 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm transition-all duration-200 block"
               >
                 <div className="aspect-[3/4] bg-slate-100 flex items-center justify-center relative">
                   {thumbUrls[p.pageNumber] ? (

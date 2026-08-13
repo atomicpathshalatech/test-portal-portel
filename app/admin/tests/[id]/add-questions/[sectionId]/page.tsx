@@ -86,8 +86,14 @@ export default function SectionQuestionEntryPage() {
     if (!prevTestId || !section) return;
     const res = await fetch(`/api/tests/${prevTestId}`);
     const test = await res.json();
-    // Only show sections from the previous test matching this section's subject
-    setPrevTestSections((test.sections || []).filter((s: any) => s.subject === section.subject));
+    // Only show sections from the previous test matching this section's
+    // subject. A "Biology" section should also surface older tests' split
+    // Botany/Zoology sections, since Biology is just a merged view of those.
+    const matches =
+      section.subject === "Biology"
+        ? (test.sections || []).filter((s: any) => s.subject === "Biology" || s.subject === "Botany" || s.subject === "Zoology")
+        : (test.sections || []).filter((s: any) => s.subject === section.subject);
+    setPrevTestSections(matches);
   }
 
   async function addQuestion(questionId: string) {
@@ -156,16 +162,16 @@ export default function SectionQuestionEntryPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
         <Link
           href={`/admin/questions/new?sectionId=${section.id}&subject=${encodeURIComponent(section.subject)}&testId=${testId}`}
-          className="card text-center hover:shadow-md transition-shadow"
+          className="card-interactive text-center"
         >
           <div className="text-2xl mb-1">✍️</div>
           <div className="font-medium text-sm text-slate-800">Create New Question</div>
         </Link>
-        <button onClick={openBank} className="card text-center hover:shadow-md transition-shadow">
+        <button onClick={openBank} className="card-interactive text-center">
           <div className="text-2xl mb-1">🏦</div>
           <div className="font-medium text-sm text-slate-800">Import from Question Bank</div>
         </button>
-        <button onClick={openPreviousTest} className="card text-center hover:shadow-md transition-shadow">
+        <button onClick={openPreviousTest} className="card-interactive text-center">
           <div className="text-2xl mb-1">🔁</div>
           <div className="font-medium text-sm text-slate-800">Import from Previous Test</div>
         </button>
@@ -179,7 +185,7 @@ export default function SectionQuestionEntryPage() {
             <h3 className="font-medium text-slate-800">
               {section.subject} — Question Bank ({filteredBank.length})
             </h3>
-            <button onClick={() => setMode("none")} className="text-xs text-slate-400">
+            <button onClick={() => setMode("none")} className="text-xs text-slate-400 hover:text-slate-600 transition-colors duration-150">
               Close
             </button>
           </div>
@@ -202,8 +208,8 @@ export default function SectionQuestionEntryPage() {
                   <button
                     onClick={() => addQuestion(q.id)}
                     disabled={already}
-                    className={`text-xs px-3 py-1 rounded-full flex-shrink-0 ml-2 ${
-                      already ? "bg-slate-100 text-slate-400" : "bg-brand text-white"
+                    className={`text-xs px-3 py-1 rounded-full flex-shrink-0 ml-2 transition-all duration-150 active:scale-95 ${
+                      already ? "bg-slate-100 text-slate-400" : "bg-brand text-white hover:bg-brand-dark"
                     }`}
                   >
                     {already ? "Added" : "Add"}
@@ -224,7 +230,7 @@ export default function SectionQuestionEntryPage() {
         <div className="card mb-6">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-medium text-slate-800">Import from a Previous Test</h3>
-            <button onClick={() => setMode("none")} className="text-xs text-slate-400">
+            <button onClick={() => setMode("none")} className="text-xs text-slate-400 hover:text-slate-600 transition-colors duration-150">
               Close
             </button>
           </div>
@@ -276,7 +282,7 @@ export default function SectionQuestionEntryPage() {
                     <span className="font-mono text-brand font-semibold">{q.questionCode}</span>
                     <span className="text-slate-400">[{q.difficulty}]</span>
                   </div>
-                  <button onClick={() => setPreviewIdx(null)} className="text-xs text-slate-400">
+                  <button onClick={() => setPreviewIdx(null)} className="text-xs text-slate-400 hover:text-slate-600 transition-colors duration-150">
                     Close
                   </button>
                 </div>
@@ -349,7 +355,7 @@ export default function SectionQuestionEntryPage() {
           <div
             key={q.id}
             onClick={() => setPreviewIdx(idx)}
-            className="card flex items-center justify-between py-3 cursor-pointer hover:shadow-md transition-shadow"
+            className="card-interactive flex items-center justify-between py-3"
           >
             <div className="flex-1 min-w-0 text-sm">
               <span className="font-mono text-xs text-brand mr-2">{q.questionCode}</span>
@@ -361,7 +367,7 @@ export default function SectionQuestionEntryPage() {
                 e.stopPropagation();
                 removeQuestion(q.id);
               }}
-              className="text-danger text-xs ml-3 flex-shrink-0"
+              className="text-danger text-xs ml-3 flex-shrink-0 hover:underline transition-all duration-150"
             >
               Remove
             </button>

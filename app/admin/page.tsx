@@ -247,7 +247,7 @@ export default async function AdminDashboard() {
       {manager && pendingApproval > 0 && (
         <Link
           href="/admin/tests"
-          className="card flex items-center justify-between bg-amber-50 border border-warning/20 hover:shadow-md transition-shadow"
+          className="card-interactive flex items-center justify-between bg-amber-50 border border-warning/20"
         >
           <div className="flex items-center gap-3">
             <span className="material-symbols-outlined text-warning">hourglass_top</span>
@@ -479,7 +479,7 @@ export default async function AdminDashboard() {
             <Link
               key={a.href}
               href={a.href}
-              className="card flex flex-col items-center justify-center text-center gap-2 py-6 hover:shadow-md hover:border-brand/30 transition-all"
+              className="card-interactive flex flex-col items-center justify-center text-center gap-2 py-6 hover:border-brand/30"
             >
               <div className="w-10 h-10 rounded-full bg-brand-light flex items-center justify-center text-brand">
                 <span className="material-symbols-outlined">{a.icon}</span>

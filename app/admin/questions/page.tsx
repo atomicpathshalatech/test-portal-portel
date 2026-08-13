@@ -40,7 +40,7 @@ export default async function QuestionBankSubjectsPage() {
           <Link
             key={s}
             href={`/admin/questions/${encodeURIComponent(s)}`}
-            className="card text-center hover:shadow-md transition-shadow"
+            className="card-interactive text-center"
           >
             <div className="text-3xl mb-2">{SUBJECT_ICON[s]}</div>
             <div className="font-semibold text-slate-800">{s}</div>
