@@ -10,7 +10,9 @@ const LINKS = [
   { href: "/student/results", label: "Results", icon: "bar_chart" },
   { href: "/student/rank-tracker", label: "Rank Tracker", icon: "trophy" },
   { href: "/student/bookmarks", label: "Bookmarks", icon: "bookmark" },
+  { href: "/student/my-reports", label: "My Reports", icon: "flag" },
   { href: "/student/ai-coach", label: "AI Coach", icon: "psychology" },
+  { href: "/student/doubts", label: "Ask a Doubt", icon: "help" },
   { href: "/student/rank-predictor", label: "Rank Predictor", icon: "target" },
 ];
 

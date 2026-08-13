@@ -10,16 +10,19 @@ const BASE_LINKS: NavItem[] = [{ href: "/admin", label: "Dashboard", icon: "dash
 const MANAGER_LINKS_TOP: NavItem[] = [
   { href: "/admin/users", label: "User Management", icon: "group" },
   { href: "/admin/students", label: "Student Registrations", icon: "school" },
+  { href: "/admin/daily-messages", label: "Daily Messages", icon: "campaign" },
   { href: "/admin/test-series", label: "Test Series", icon: "collections_bookmark" },
   { href: "/admin/test-templates", label: "Test Templates", icon: "content_copy" },
 ];
 
 const SHARED_LINKS: NavItem[] = [
   { href: "/admin/questions", label: "Question Bank", icon: "database" },
+  { href: "/admin/questions/search", label: "Search Question Bank", icon: "search" },
   { href: "/admin/module-studio", label: "Module Studio", icon: "auto_stories" },
   { href: "/admin/tests", label: "Manage Tests", icon: "assignment" },
   { href: "/admin/dpps", label: "DPPs", icon: "today" },
   { href: "/admin/reports", label: "Question Reports", icon: "flag" },
+  { href: "/admin/doubts", label: "Doubts", icon: "help" },
 ];
 
 const MANAGER_LINKS_BOTTOM: NavItem[] = [

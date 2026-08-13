@@ -88,13 +88,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   // Auto-notify students the moment a test goes live for them to see.
   if (status === "PUBLISHED" && test.status !== "PUBLISHED") {
-    const students = await prisma.user.findMany({ where: { role: "STUDENT" }, select: { id: true } });
+    const students = await prisma.user.findMany({ where: { role: "STUDENT", isActive: true }, select: { id: true } });
     if (students.length > 0) {
       await prisma.notification.createMany({
         data: students.map((s) => ({
           userId: s.id,
+          type: "TEST_PUBLISHED",
           title: "New test published",
           message: `${test.name} is now available. Check your dashboard for schedule details.`,
+          deepLink: `/student/exam/${test.id}`,
         })),
       });
     }

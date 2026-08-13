@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import FormulaText from "@/components/FormulaText";
+import FormulaEditor from "@/components/FormulaEditor";
 import { SYLLABUS, resolveBiologySubject } from "@/lib/syllabusData";
 
 type OptionRow = { id: string; text: string };
@@ -226,23 +226,17 @@ export default function AiGenerateQuestionsPage() {
             {(["en", "hi"] as const).map((lang) => {
               const statement = lang === "en" ? d.statement_en : d.statement_hi;
               const options = lang === "en" ? d.options_en : d.options_hi;
+              const solution = lang === "en" ? d.solution_en : d.solution_hi;
               if (!statement || !options) return null;
               return (
                 <div key={lang} className="mb-4 pb-4 border-b last:border-0">
                   <div className="text-xs font-semibold text-brand mb-1">{lang.toUpperCase()}</div>
-                  <textarea
-                    className="input font-mono text-sm mb-2"
-                    rows={2}
+                  <FormulaEditor
                     value={statement}
-                    onChange={(e) =>
-                      updateDraft(idx, lang === "en" ? { statement_en: e.target.value } : { statement_hi: e.target.value })
-                    }
+                    onChange={(v) => updateDraft(idx, lang === "en" ? { statement_en: v } : { statement_hi: v })}
+                    rows={2}
                   />
-                  <div className="text-xs text-slate-400 mb-1">Preview:</div>
-                  <p className="text-sm text-slate-700 mb-2">
-                    <FormulaText text={statement} />
-                  </p>
-                  <div className="space-y-1">
+                  <div className="space-y-1 mt-2">
                     {options.map((opt, oIdx) => (
                       <div key={opt.id} className="flex items-center gap-2">
                         <span
@@ -260,6 +254,13 @@ export default function AiGenerateQuestionsPage() {
                       </div>
                     ))}
                   </div>
+                  <label className="label text-xs mt-3">Solution ({lang.toUpperCase()})</label>
+                  <FormulaEditor
+                    value={solution || ""}
+                    onChange={(v) => updateDraft(idx, lang === "en" ? { solution_en: v } : { solution_hi: v })}
+                    rows={2}
+                    placeholder="Explain the correct approach..."
+                  />
                 </div>
               );
             })}
@@ -278,13 +279,6 @@ export default function AiGenerateQuestionsPage() {
                 ))}
               </select>
             </div>
-
-            {(d.solution_en || d.solution_hi) && (
-              <div className="mt-3 pt-3 border-t text-sm text-slate-600">
-                <span className="text-xs text-slate-400 block mb-1">Solution</span>
-                <FormulaText text={d.solution_en || d.solution_hi || ""} />
-              </div>
-            )}
           </div>
         ))}
       </div>

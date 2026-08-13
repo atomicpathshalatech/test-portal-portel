@@ -126,6 +126,7 @@ export default function DppAddQuestionsPage() {
   const [aiResult, setAiResult] = useState<{ correctOptionId: string | null; confidence: string } | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [metadataConfirmed, setMetadataConfirmed] = useState(false);
+  const [slotChoice, setSlotChoice] = useState<"none" | "new" | "import">("none");
   const [subTopicSuggestions, setSubTopicSuggestions] = useState<string[]>([]);
   const [extractingScreenshot, setExtractingScreenshot] = useState(false);
   const [extractingSolutionImage, setExtractingSolutionImage] = useState(false);
@@ -161,6 +162,7 @@ export default function DppAddQuestionsPage() {
     setForm(next);
     setSavedSnapshot(JSON.stringify(next));
     setMetadataConfirmed(!!link);
+    setSlotChoice("none");
   }, [dpp, slot]);
 
   useEffect(() => {
@@ -596,7 +598,8 @@ export default function DppAddQuestionsPage() {
   const chapters = Object.keys(SYLLABUS[dpp.subject] || {});
   const topics = form.chapter ? SYLLABUS[dpp.subject]?.[form.chapter] || [] : [];
   const isNewSlot = !form.existingQuestionId;
-  const showMetadataGate = isNewSlot && !metadataConfirmed;
+  const showChoiceScreen = isNewSlot && slotChoice === "none";
+  const showMetadataGate = isNewSlot && slotChoice === "new" && !metadataConfirmed;
   const canContinueMetadata = !!form.chapter;
 
   return (
@@ -641,6 +644,56 @@ export default function DppAddQuestionsPage() {
       <div className="flex-1 overflow-y-auto p-3 sm:p-6">
         {error && <div className="text-sm text-danger mb-3">{error}</div>}
 
+        {showChoiceScreen ? (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-lg w-full">
+              <button
+                onClick={() => setSlotChoice("new")}
+                className="card-interactive flex flex-col items-center justify-center text-center gap-2 py-10"
+              >
+                <div className="text-3xl mb-1">➕</div>
+                <div className="font-semibold text-slate-800">Add New Question</div>
+                <div className="text-xs text-slate-400">Opens the full Question Builder</div>
+              </button>
+              <button
+                onClick={() => setSlotChoice("import")}
+                className="card-interactive flex flex-col items-center justify-center text-center gap-2 py-10"
+              >
+                <div className="text-3xl mb-1">📥</div>
+                <div className="font-semibold text-slate-800">Import Question</div>
+                <div className="text-xs text-slate-400">Enter a Question ID from the Question Bank</div>
+              </button>
+            </div>
+          </div>
+        ) : slotChoice === "import" ? (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="card max-w-sm w-full text-center">
+              <button
+                onClick={() => {
+                  setSlotChoice("none");
+                  setError("");
+                }}
+                className="text-xs text-brand hover:opacity-70 transition-opacity duration-150 mb-4"
+              >
+                ← Back
+              </button>
+              <div className="text-3xl mb-2">📥</div>
+              <h3 className="font-semibold text-slate-900 mb-1">Import Question</h3>
+              <p className="text-xs text-slate-500 mb-4">Enter the Question ID exactly as shown in the Question Bank.</p>
+              <input
+                className="input text-center font-mono uppercase mb-3"
+                placeholder="e.g. PH10025"
+                value={importByIdCode}
+                onChange={(e) => setImportByIdCode(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleImportById()}
+                autoFocus
+              />
+              <button onClick={handleImportById} disabled={importingById || !importByIdCode.trim()} className="btn-primary w-full disabled:opacity-40">
+                {importingById ? "Importing..." : "Import"}
+              </button>
+            </div>
+          </div>
+        ) : (
         <div className={showMetadataGate ? "pointer-events-none blur-sm select-none" : ""}>
           <div
             onPaste={handleScreenshotPaste}
@@ -753,19 +806,6 @@ export default function DppAddQuestionsPage() {
             </button>
           </div>
 
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-xs text-slate-500">🔗 Import by Question ID:</span>
-            <input
-              className="input text-sm max-w-[160px] py-1.5 font-mono uppercase"
-              placeholder="e.g. PH10025"
-              value={importByIdCode}
-              onChange={(e) => setImportByIdCode(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleImportById()}
-            />
-            <button onClick={handleImportById} disabled={importingById || !importByIdCode.trim()} className="btn-secondary text-xs disabled:opacity-40">
-              {importingById ? "Importing..." : "Add"}
-            </button>
-          </div>
           <div
             onPaste={(e) => {
               const items = e.clipboardData?.items;
@@ -800,8 +840,10 @@ export default function DppAddQuestionsPage() {
             </div>
           )}
         </div>
+        )}
       </div>
 
+      {!showChoiceScreen && slotChoice !== "import" && (
       <div className="bg-white border-t px-3 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
         <button onClick={() => guardedGoTo(Math.max(1, slot - 1))} disabled={slot <= 1 || showMetadataGate} className="btn-secondary text-xs sm:text-sm disabled:opacity-40 order-1">← Prev</button>
         <span className="text-xs sm:text-sm text-slate-500 order-3 sm:order-2 w-full sm:w-auto text-center sm:text-left">Question {slot} / {target}</span>
@@ -832,6 +874,7 @@ export default function DppAddQuestionsPage() {
           <button onClick={() => guardedGoTo(Math.min(target, slot + 1))} disabled={slot >= target || showMetadataGate} className="btn-secondary text-xs sm:text-sm disabled:opacity-40">Next →</button>
         </div>
       </div>
+      )}
 
       {/* Mandatory Metadata Popup — gates a brand-new question slot */}
       {showMetadataGate && (
@@ -874,7 +917,7 @@ export default function DppAddQuestionsPage() {
             </div>
 
             <div className="flex gap-2">
-              <button type="button" onClick={() => router.push("/admin/dpps")} className="btn-secondary text-sm flex-1">Cancel</button>
+              <button type="button" onClick={() => setSlotChoice("none")} className="btn-secondary text-sm flex-1">Cancel</button>
               <button type="button" onClick={() => setMetadataConfirmed(true)} disabled={!canContinueMetadata} className="btn-primary text-sm flex-1 disabled:opacity-40">Continue</button>
             </div>
           </div>

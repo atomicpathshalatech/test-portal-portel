@@ -1,13 +1,14 @@
 import katex from "katex";
 
-type Segment = { type: "text" | "inline" | "block" | "image"; content: string };
+type Segment = { type: "text" | "inline" | "block" | "image" | "bold"; content: string };
 
-// Splits "Find $x^2 + y^2$ when ..." into text/formula/image segments.
-// $$...$$ (display/block) is matched before $...$ (inline).
-// ![](url) is a pasted image, matched before both.
+// Splits "Find $x^2 + y^2$ when ...**Statement-I:**" into text/formula/image/
+// bold segments. $$...$$ (display/block) is matched before $...$ (inline).
+// ![](url) is a pasted image, matched before both. **bold** is common in
+// multi-statement NEET-style questions (Statement-I/Statement-II headers).
 function parseSegments(input: string): Segment[] {
   const segments: Segment[] = [];
-  const regex = /!\[\]\((.+?)\)|\$\$(.+?)\$\$|\$(.+?)\$/gs;
+  const regex = /!\[\]\((.+?)\)|\$\$(.+?)\$\$|\$(.+?)\$|\*\*(.+?)\*\*/gs;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
@@ -21,6 +22,8 @@ function parseSegments(input: string): Segment[] {
       segments.push({ type: "block", content: match[2] });
     } else if (match[3] !== undefined) {
       segments.push({ type: "inline", content: match[3] });
+    } else if (match[4] !== undefined) {
+      segments.push({ type: "bold", content: match[4] });
     }
     lastIndex = regex.lastIndex;
   }
@@ -49,6 +52,9 @@ export function renderFormulaContent(input: string): string {
     .map((seg) => {
       if (seg.type === "text") {
         return escapeHtml(seg.content).replace(/\n/g, "<br/>");
+      }
+      if (seg.type === "bold") {
+        return `<strong>${escapeHtml(seg.content).replace(/\n/g, "<br/>")}</strong>`;
       }
       if (seg.type === "image") {
         return `<img src="${escapeHtml(seg.content)}" style="max-width:100%;max-height:220px;display:block;margin:6px 0;border-radius:6px;" />`;

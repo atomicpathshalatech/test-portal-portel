@@ -32,6 +32,28 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     ? await prisma.attempt.count({ where: { testId: attempt.testId, status: { in: ["SUBMITTED", "AUTO_SUBMITTED"] } } })
     : await prisma.attempt.count({ where: { dppId: attempt.dppId, status: { in: ["SUBMITTED", "AUTO_SUBMITTED"] } } });
 
+  // Full per-question breakdown for the Solutions Review section — only
+  // meaningful once the attempt is actually finished (mid-attempt students
+  // shouldn't be able to peek at answers via this endpoint).
+  const isFinished = attempt.status === "SUBMITTED" || attempt.status === "AUTO_SUBMITTED";
+  const questions = isFinished
+    ? attempt.answers.map((a) => ({
+        questionId: a.question.id,
+        questionCode: a.question.questionCode,
+        subject: a.question.subject,
+        imageUrl: a.question.imageUrl,
+        selectedOptionIds: a.selectedOptionIds,
+        isCorrect: a.isCorrect,
+        translations: a.question.translations.map((t) => ({
+          language: t.language,
+          statement: t.statement,
+          options: t.options,
+          correctOptionIds: t.correctOptionIds,
+          solution: t.solution,
+        })),
+      }))
+    : [];
+
   return NextResponse.json({
     status: attempt.status,
     score: attempt.score,
@@ -43,5 +65,6 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     testName: attempt.test?.name || attempt.dpp?.name,
     bySubject,
     byDifficulty,
+    questions,
   });
 }

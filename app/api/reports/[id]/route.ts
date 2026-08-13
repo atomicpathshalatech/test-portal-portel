@@ -79,8 +79,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       await prisma.notification.create({
         data: {
           userId: report.reportedById,
-          title: "Your reported question was corrected",
-          message: `Thanks for the report! Question ${report.question.questionCode || ""} has been fixed.`,
+          type: "REPORT_RESOLVED",
+          title: "📌 Your Question Report Has Been Resolved",
+          message: `Thanks for the report! Question ${report.question.questionCode || ""} has been reviewed and corrected.`,
+          deepLink: "/student/my-reports",
         },
       });
     }

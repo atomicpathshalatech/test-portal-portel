@@ -1,15 +1,18 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type NotificationRow = {
   id: string;
   title: string;
   message: string;
+  deepLink: string | null;
   isRead: boolean;
   createdAt: string;
 };
 
 export default function NotificationsPage() {
+  const router = useRouter();
   const [notifications, setNotifications] = useState<NotificationRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,6 +33,11 @@ export default function NotificationsPage() {
   async function markRead(id: string) {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)));
     await fetch(`/api/notifications/${id}/read`, { method: "POST" });
+  }
+
+  function handleClick(n: NotificationRow) {
+    if (!n.isRead) markRead(n.id);
+    if (n.deepLink) router.push(n.deepLink);
   }
 
   async function markAllRead() {
@@ -62,8 +70,10 @@ export default function NotificationsPage() {
           {notifications.map((n) => (
             <div
               key={n.id}
-              onClick={() => !n.isRead && markRead(n.id)}
-              className={`card cursor-pointer transition-colors ${!n.isRead ? "border-l-4 border-brand" : ""}`}
+              onClick={() => handleClick(n)}
+              className={`card cursor-pointer transition-colors ${!n.isRead ? "border-l-4 border-brand" : ""} ${
+                n.deepLink ? "hover:shadow-md" : ""
+              }`}
             >
               <div className="flex items-start justify-between gap-4">
                 <div>

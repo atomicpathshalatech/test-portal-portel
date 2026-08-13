@@ -46,8 +46,27 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (data.status === "PUBLISHED" && !isManagerTier(session.role)) {
     return NextResponse.json({ message: "Only Sub Admin / Super Admin can publish a DPP" }, { status: 403 });
   }
+  if (data.status === "PUBLISHED" && existing.status !== "PUBLISHED") {
+    data.publishedAt = new Date();
+  }
 
   const updated = await prisma.dpp.update({ where: { id: params.id }, data });
+
+  // Auto-notify students the moment a DPP goes live, same as tests.
+  if (data.status === "PUBLISHED" && existing.status !== "PUBLISHED") {
+    const students = await prisma.user.findMany({ where: { role: "STUDENT", isActive: true }, select: { id: true } });
+    if (students.length > 0) {
+      await prisma.notification.createMany({
+        data: students.map((s) => ({
+          userId: s.id,
+          type: "DPP_PUBLISHED",
+          title: "📚 New DPP Published",
+          message: `${updated.name} is now available. Solve it and keep your preparation on track.`,
+          deepLink: `/student/dpp-attempt/${updated.id}`,
+        })),
+      });
+    }
+  }
 
   await logAudit({ userId: session.id, action: "EDIT_DPP", entityType: "Dpp", entityId: params.id, details: updated.name });
 

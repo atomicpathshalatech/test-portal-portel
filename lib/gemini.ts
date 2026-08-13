@@ -236,6 +236,22 @@ export function parseJsonResponse<T>(raw: string): T {
 function isUnambiguousEscape(next: string, input: string, i: number): boolean {
   if (next === '"' || next === "\\" || next === "/") return true;
   if (next === "u") return /^[0-9a-fA-F]{4}/.test(input.slice(i + 2, i + 6));
+  // \n \t \r \b \f are valid single-char JSON escapes, but n/t/r/b/f are
+  // also the first letter of extremely common LaTeX commands (\nu, \nabla,
+  // \tau, \theta, \rho, \beta, \frac...). Heuristic: if the character right
+  // after this letter continues into another lowercase letter, it's
+  // overwhelmingly a multi-letter LaTeX command name, not an intentional
+  // escape — e.g. "\theta" has 'h' right after the 't', so it's LaTeX, but
+  // an intentional "\n\n**Statement" has '\' or '*' right after the first
+  // 'n', so it's a genuine newline escape. This correctly handles both
+  // "\rho"/"\theta" (LaTeX, gets doubled below) and real "\n" paragraph
+  // breaks (passed through as a genuine escape, not mangled into literal
+  // backslash-n text).
+  if ("nrtbf".includes(next)) {
+    const after = input[i + 2];
+    const looksLikeLatexWord = after && /[a-z]/.test(after);
+    return !looksLikeLatexWord;
+  }
   return false;
 }
 

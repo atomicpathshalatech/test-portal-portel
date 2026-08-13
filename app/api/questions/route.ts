@@ -11,6 +11,9 @@ export async function GET(req: NextRequest) {
   const subjectParam = req.nextUrl.searchParams.get("subject");
   const difficulty = req.nextUrl.searchParams.get("difficulty");
   const code = req.nextUrl.searchParams.get("code"); // exact lookup by Question ID
+  const chapter = req.nextUrl.searchParams.get("chapter");
+  const type = req.nextUrl.searchParams.get("type");
+  const search = req.nextUrl.searchParams.get("search")?.trim();
 
   // Rule 3: a Teacher only ever sees their own subject's questions,
   // regardless of what's requested in the query string.
@@ -26,9 +29,20 @@ export async function GET(req: NextRequest) {
       subject: subjectFilter,
       difficulty: (difficulty as any) || undefined,
       questionCode: code ? code.trim().toUpperCase() : undefined,
+      chapter: chapter || undefined,
+      type: (type as any) || undefined,
+      OR: search
+        ? [
+            { questionCode: { contains: search, mode: "insensitive" } },
+            { tags: { contains: search, mode: "insensitive" } },
+            { topic: { contains: search, mode: "insensitive" } },
+            { translations: { some: { statement: { contains: search, mode: "insensitive" } } } },
+          ]
+        : undefined,
     },
     include: { translations: true, createdBy: { select: { name: true } } },
     orderBy: { createdAt: "desc" },
+    take: code ? undefined : 50, // exact ID lookups return everything matching; search results cap for speed
   });
   return NextResponse.json(questions);
 }

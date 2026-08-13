@@ -43,6 +43,9 @@ model User {
   publishedQuestions     Question[]           @relation("QuestionPublishedBy")
   reportsClaimed         QuestionReport[]     @relation("ReportClaimedBy")
   reportsFiled           QuestionReport[]     @relation("ReportFiledBy")
+  doubtsAsked            Doubt[]              @relation("DoubtStudent")
+  doubtsAssigned         Doubt[]              @relation("DoubtAssignedTo")
+  dailyCheckIns          DailyCheckIn[]
   questionVersionsEdited QuestionVersion[]    @relation("QuestionVersionEditedBy")
   createdTests           Test[]               @relation("TestCreatedBy")
   createdTestTemplates   TestTemplate[]       @relation("TestTemplateCreatedBy")
@@ -113,7 +116,9 @@ model Test {
   createdById            String?
   status                 TestStatus   @default(DRAFT)
   reminder15SentAt       DateTime?
+  reminder1HourSentAt    DateTime?
   startNotifiedAt        DateTime?
+  notAttemptedCheckedAt  DateTime?
   description            String?
   examType               String?
   instructions           String?
@@ -158,6 +163,7 @@ model Question {
   usageCount     Int                   @default(0)
   tags           String?
   isPublished    Boolean               @default(false)
+  archived       Boolean               @default(false)
   publishedAt    DateTime?
   publishedById  String?
   subTopic       String?
@@ -188,6 +194,12 @@ model QuestionTranslation {
 model SectionQuestion {
   id                    String   @id @default(uuid())
   sectionId             String
+  testId                String? // denormalized from section.testId — enables a
+  // single UNIQUE(testId, questionId) constraint so the same question can
+  // never exist twice anywhere in one Test, not just within one Section.
+  // Nullable for backward compatibility with rows created before this field
+  // existed; Postgres allows multiple NULLs in a unique index, so old rows
+  // are unaffected — every new row going forward always sets it.
   questionId            String
   order                 Int      @default(0)
   marksOverride         Float?
@@ -195,6 +207,8 @@ model SectionQuestion {
   reviewStatus          String   @default("PENDING")
   question              Question @relation(fields: [questionId], references: [id])
   section               Section  @relation(fields: [sectionId], references: [id])
+
+  @@unique([testId, questionId])
 }
 
 model Attempt {
@@ -313,11 +327,64 @@ model Bookmark {
   @@unique([studentId, questionId])
 }
 
+model DailyMessage {
+  id         String    @id @default(uuid())
+  type       String // MORNING | NIGHT
+  title      String
+  body       String
+  enabled    Boolean   @default(true)
+  lastSentAt DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+// Generic idempotency guard for recurring (once-per-day) jobs — a job writes
+// a unique jobKey (e.g. "morning-motivation:2026-08-13") before sending
+// anything; if that key already exists, the job was already run and skips.
+model ScheduledJobLog {
+  id     String   @id @default(uuid())
+  jobKey String   @unique
+  ranAt  DateTime @default(now())
+}
+
+model Doubt {
+  id           String    @id @default(uuid())
+  studentId    String
+  subject      String?
+  chapter      String?
+  topic        String?
+  message      String
+  imageUrl     String?
+  status       String    @default("OPEN") // OPEN | IN_REVIEW | ANSWERED | CLOSED
+  assignedToId String?
+  adminResponse String?
+  createdAt    DateTime  @default(now())
+  resolvedAt   DateTime?
+  student      User      @relation("DoubtStudent", fields: [studentId], references: [id])
+  assignedTo   User?     @relation("DoubtAssignedTo", fields: [assignedToId], references: [id])
+}
+
+model DailyCheckIn {
+  id                String   @id @default(uuid())
+  studentId         String
+  date              String // IST calendar date, YYYY-MM-DD — one row per student per day
+  targetCompleted   Boolean  @default(false)
+  revisionCompleted Boolean  @default(false)
+  dppCompleted      Boolean  @default(false)
+  testCompleted     Boolean  @default(false)
+  hasDoubt          Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  student           User     @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, date])
+}
+
 model Notification {
   id        String   @id @default(uuid())
   userId    String
+  type      String? // e.g. WELCOME, TEST_PUBLISHED, DPP_PUBLISHED, REPORT_SUBMITTED, REPORT_RESOLVED
   title     String
   message   String
+  deepLink  String? // client-side route to open when the notification is clicked
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
@@ -398,6 +465,8 @@ model Dpp {
   negativeMarkingEnabled Boolean       @default(true)
   questionTargetCount    Int           @default(0)
   status                 String        @default("DRAFT")
+  publishedAt            DateTime?
+  pendingReminderSentAt  DateTime?
   createdById            String?
   createdAt              DateTime      @default(now())
   level                  Int?
@@ -414,6 +483,8 @@ model DppQuestion {
   order      Int      @default(0)
   dpp        Dpp      @relation(fields: [dppId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   question   Question @relation(fields: [questionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([dppId, questionId])
 }
 
 model Module {

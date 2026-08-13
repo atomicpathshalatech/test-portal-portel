@@ -51,31 +51,45 @@ export async function POST(req: NextRequest) {
     await prisma.notification.createMany({
       data: uniqueIds.map((uid) => ({
         userId: uid,
+        type: "REPORT_SUBMITTED_ADMIN",
         title: "🚨 New Question Report",
         message: `Question ${question.questionCode || question.id} was reported: ${tags.join(", ")}`,
+        deepLink: `/admin/reports/${report.id}`,
       })),
     });
   }
 
+  // Confirmation back to the student who filed it.
+  await prisma.notification.create({
+    data: {
+      userId: session.id,
+      type: "REPORT_SUBMITTED",
+      title: "✅ Report Received",
+      message: "आपकी question report successfully submit हो गई है। हमारी team इसे review करेगी.",
+      deepLink: "/student/my-reports",
+    },
+  });
+
   return NextResponse.json(report, { status: 201 });
 }
 
-// Admin-tier users list/filter reports
+// Admin-tier users list/filter all reports; students see only their own.
 export async function GET(req: NextRequest) {
   const session = getSession();
-  if (!session || !isAdminTier(session.role)) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
+  if (!session) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   const status = req.nextUrl.searchParams.get("status");
   const priority = req.nextUrl.searchParams.get("priority");
+  const isAdmin = isAdminTier(session.role);
 
   const reports = await prisma.questionReport.findMany({
     where: {
       status: status || undefined,
-      priority: priority || undefined,
-      // Rule 3: Teachers only see reports for their own subject's questions.
-      question: session.role === "TEACHER" && session.subject ? { subject: session.subject } : undefined,
+      priority: isAdmin ? priority || undefined : undefined,
+      // Students only ever see their own submitted reports. Teachers only
+      // see reports for their own subject's questions.
+      reportedById: isAdmin ? undefined : session.id,
+      question: isAdmin && session.role === "TEACHER" && session.subject ? { subject: session.subject } : undefined,
     },
     orderBy: { createdAt: "desc" },
     include: {

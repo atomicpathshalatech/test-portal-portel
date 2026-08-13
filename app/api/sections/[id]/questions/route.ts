@@ -14,16 +14,37 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const section = await prisma.section.findUnique({ where: { id: params.id } });
   if (!section) return NextResponse.json({ message: "Section not found" }, { status: 404 });
 
+  const question = await prisma.question.findUnique({ where: { id: questionId } });
+  if (!question) return NextResponse.json({ message: "Question ID not found." }, { status: 404 });
+  if (question.archived) {
+    return NextResponse.json({ message: "Question is archived and cannot be imported." }, { status: 409 });
+  }
+
+  // Duplicate check scoped to the WHOLE TEST, not just this section — a
+  // question can only appear once anywhere in a Test, across all sections.
   const existing = await prisma.sectionQuestion.findFirst({
-    where: { sectionId: params.id, questionId },
+    where: { testId: section.testId, questionId },
+    include: { section: { select: { name: true } } },
   });
   if (existing) {
-    return NextResponse.json({ message: "This question is already in the section" }, { status: 409 });
+    const position = await prisma.sectionQuestion.count({
+      where: { sectionId: existing.sectionId, order: { lt: existing.order } },
+    });
+    return NextResponse.json(
+      {
+        message: "Question already exists in this Test/DPP.",
+        duplicate: true,
+        existingSectionId: existing.sectionId,
+        existingSectionName: existing.section.name,
+        existingPosition: position + 1,
+      },
+      { status: 409 }
+    );
   }
 
   const count = await prisma.sectionQuestion.count({ where: { sectionId: params.id } });
   const link = await prisma.sectionQuestion.create({
-    data: { sectionId: params.id, questionId, order: count },
+    data: { sectionId: params.id, testId: section.testId, questionId, order: count },
   });
   await prisma.question.update({ where: { id: questionId }, data: { usageCount: { increment: 1 } } });
 

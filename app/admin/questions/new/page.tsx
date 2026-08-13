@@ -60,12 +60,12 @@ export default function NewQuestionPage() {
   const [pyqCustom, setPyqCustom] = useState(false);
   const [topicCustom, setTopicCustom] = useState(false);
   const [aiSolving, setAiSolving] = useState(false);
-  const [aiResult, setAiResult] = useState<{ correctOptionId: string | null; confidence: string } | null>(null);
+  const [aiResult, setAiResult] = useState<{ hi: { correctOptionId: string | null; confidence: string } | null; en: { correctOptionId: string | null; confidence: string } | null }>({ hi: null, en: null });
   const [aiError, setAiError] = useState("");
+  const [justSavedCode, setJustSavedCode] = useState<string | null>(null);
   const [pyqOptions, setPyqOptions] = useState<string[]>([]);
   const [createdCode, setCreatedCode] = useState<string | null>(null);
   const [lockedSubject, setLockedSubject] = useState<string | null>(null);
-  const [activeLang, setActiveLang] = useState<"hi" | "en">("en");
   const [enableHi, setEnableHi] = useState(true);
   const [enableEn, setEnableEn] = useState(true);
   const isIntegerType = meta.type === "INTEGER" || meta.type === "NUMERICAL";
@@ -75,6 +75,14 @@ export default function NewQuestionPage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [error, setError] = useState("");
   const [extractingScreenshot, setExtractingScreenshot] = useState(false);
+  // Automatic bilingual sync: when one language's statement is filled and
+  // the other is empty, translate across; when a language has an answer-less
+  // statement+options, auto-suggest the correct option via AI. Admins can
+  // always overwrite anything these produce — they're starting points, not
+  // final answers.
+  const [autoTranslating, setAutoTranslating] = useState(false);
+  const [autoSolving, setAutoSolving] = useState<{ hi: boolean; en: boolean }>({ hi: false, en: false });
+  const [aiSuggested, setAiSuggested] = useState<{ hi: boolean; en: boolean }>({ hi: false, en: false });
   const [isPublishedQuestion, setIsPublishedQuestion] = useState(false);
   const [editReason, setEditReason] = useState("");
   const [loading, setLoading] = useState(false);
@@ -106,7 +114,6 @@ export default function NewQuestionPage() {
         setEnableEn(!!enT);
         if (hiT) setHi({ statement: hiT.statement, options: hiT.options, correctOptionIds: hiT.correctOptionIds, solution: hiT.solution || "" });
         if (enT) setEn({ statement: enT.statement, options: enT.options, correctOptionIds: enT.correctOptionIds, solution: enT.solution || "" });
-        setActiveLang(enT ? "en" : "hi");
         setIsPublishedQuestion(!!q.isPublished);
         setLoadingExisting(false);
       });
@@ -249,27 +256,29 @@ export default function NewQuestionPage() {
     }
   }
 
-  const current = activeLang === "hi" ? hi : en;
-  const setCurrent = activeLang === "hi" ? setHi : setEn;
-
-  function updateOption(idx: number, text: string) {
-    const options = [...current.options];
+  function updateOptionFor(lang: "hi" | "en", idx: number, text: string) {
+    const setter = lang === "hi" ? setHi : setEn;
+    const content = lang === "hi" ? hi : en;
+    const options = [...content.options];
     options[idx] = { ...options[idx], text };
-    setCurrent({ ...current, options });
+    setter({ ...content, options });
   }
 
-  function toggleCorrect(optionId: string) {
+  function toggleCorrectFor(lang: "hi" | "en", optionId: string) {
     const isMulti = meta.type === "MULTIPLE_CORRECT";
-    let ids = current.correctOptionIds;
+    const setter = lang === "hi" ? setHi : setEn;
+    const content = lang === "hi" ? hi : en;
+    let ids = content.correctOptionIds;
     if (isMulti) {
       ids = ids.includes(optionId) ? ids.filter((i) => i !== optionId) : [...ids, optionId];
     } else {
       ids = [optionId];
     }
-    setCurrent({ ...current, correctOptionIds: ids });
+    setter({ ...content, correctOptionIds: ids });
+    setAiSuggested((s) => ({ ...s, [lang]: false }));
   }
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent, exitAfter = false) {
     e.preventDefault();
     setError("");
     if (!enableHi && !enableEn) {
@@ -355,18 +364,38 @@ export default function NewQuestionPage() {
     }
     const created = await res.json();
 
-    if (sectionId) {
-      await fetch(`/api/sections/${sectionId}/questions`, {
+    const dppId = searchParams.get("dppId");
+    const testId = searchParams.get("testId");
+
+    if (dppId || sectionId) {
+      const linkUrl = dppId ? `/api/dpps/${dppId}/questions` : `/api/sections/${sectionId}/questions`;
+      const linkRes = await fetch(linkUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ questionId: created.id }),
       });
-      const testId = searchParams.get("testId");
-      router.push(
-        testId
-          ? `/admin/tests/${testId}/add-questions/${sectionId}?added=${created.id}`
-          : "/admin/questions"
-      );
+      if (!linkRes.ok) {
+        const d = await linkRes.json().catch(() => ({}));
+        setError(d.message || "Question was created but couldn't be linked — it's still safely saved in the Question Bank.");
+        return;
+      }
+
+      if (exitAfter) {
+        router.push(dppId ? `/admin/dpps/${dppId}/add-questions` : testId ? `/admin/tests/${testId}/add-questions` : "/admin/questions");
+        return;
+      }
+
+      // Save & Next — stay in place with a fresh blank editor. Chapter/topic/
+      // subject/difficulty carry over since consecutive questions in one
+      // sitting are usually from the same chapter; content resets.
+      setJustSavedCode(created.questionCode);
+      setHi(isIntegerType ? emptyIntegerLang() : emptyLang());
+      setEn(isIntegerType ? emptyIntegerLang() : emptyLang());
+      setImageUrl(null);
+      setAiResult({ hi: null, en: null });
+      setAiSuggested({ hi: false, en: false });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      setTimeout(() => setJustSavedCode(null), 4000);
       return;
     }
 
@@ -385,14 +414,16 @@ export default function NewQuestionPage() {
     return `/admin/questions/${encodeURIComponent(meta.subject)}`;
   }
 
-  async function handleAiSolve() {
-    if (!current.statement.trim()) {
+  async function handleAiSolveFor(lang: "hi" | "en") {
+    const content = lang === "hi" ? hi : en;
+    const setter = lang === "hi" ? setHi : setEn;
+    if (!content.statement.trim()) {
       setAiError("Write the question statement first.");
       return;
     }
     setAiSolving(true);
     setAiError("");
-    setAiResult(null);
+    setAiResult((prev) => ({ ...prev, [lang]: null }));
     const res = await fetch("/api/ai/solve-question", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -400,9 +431,9 @@ export default function NewQuestionPage() {
         subject: meta.subject,
         chapter: meta.chapter,
         topic: meta.topic,
-        statement: current.statement,
-        options: current.options,
-        language: activeLang,
+        statement: content.statement,
+        options: content.options,
+        language: lang,
         questionType: meta.type,
       }),
     });
@@ -412,17 +443,195 @@ export default function NewQuestionPage() {
       setAiError(data.message || "AI solve failed");
       return;
     }
-    setCurrent({ ...current, solution: data.solution || "" });
-    setAiResult({ correctOptionId: data.correctOptionId, confidence: data.confidence });
+    setter({ ...content, solution: data.solution || "" });
+    setAiResult((prev) => ({ ...prev, [lang]: { correctOptionId: data.correctOptionId, confidence: data.confidence } }));
   }
 
-  function applyAiAnswer() {
-    if (!aiResult?.correctOptionId) return;
-    setCurrent({ ...current, correctOptionIds: [aiResult.correctOptionId] });
+  function applyAiAnswerFor(lang: "hi" | "en") {
+    const result = aiResult[lang];
+    if (!result?.correctOptionId) return;
+    const setter = lang === "hi" ? setHi : setEn;
+    const content = lang === "hi" ? hi : en;
+    setter({ ...content, correctOptionIds: [result.correctOptionId] });
+    setAiSuggested((s) => ({ ...s, [lang]: true }));
+  }
+
+  // ---- Automatic bilingual sync ----
+  // Debounce key: join statement + option texts into one string so the
+  // effect re-fires as the admin keeps typing/pasting, without re-running on
+  // every keystroke (real API calls only fire ~1.5s after typing stops).
+  const enKey = `${en.statement}|${en.options.map((o) => o.text).join("|")}`;
+  const hiKey = `${hi.statement}|${hi.options.map((o) => o.text).join("|")}`;
+
+  // 1) Translate: when one enabled language has a statement and the other
+  // (also enabled) is empty, auto-translate statement + options + solution
+  // across — same endpoint/NCERT-terminology behavior the Test/DPP builders
+  // already use, just triggered automatically instead of by a button.
+  useEffect(() => {
+    if (loadingExisting || autoTranslating) return;
+    const timer = setTimeout(async () => {
+      let sourceLang: "hi" | "en" | null = null;
+      if (enableEn && en.statement.trim() && enableHi && !hi.statement.trim()) sourceLang = "en";
+      else if (enableHi && hi.statement.trim() && enableEn && !en.statement.trim()) sourceLang = "hi";
+      if (!sourceLang) return;
+
+      const source = sourceLang === "hi" ? hi : en;
+      const targetLang = sourceLang === "hi" ? "en" : "hi";
+      setAutoTranslating(true);
+      try {
+        const res = await fetch("/api/ai/translate-question", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            subject: meta.subject,
+            sourceLang,
+            statement: source.statement,
+            options: isIntegerType ? undefined : source.options,
+            solution: source.solution,
+            isIntegerType,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          const setTarget = targetLang === "hi" ? setHi : setEn;
+          setTarget((prev) => ({
+            ...prev,
+            statement: data.statement || "",
+            options: isIntegerType ? prev.options : data.options || prev.options,
+            solution: data.solution || prev.solution,
+          }));
+        }
+      } catch {
+        // Silent — this is a background convenience, not a blocking action.
+        // The admin can still fill the other language in by hand.
+      } finally {
+        setAutoTranslating(false);
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enKey, hiKey, enableEn, enableHi, loadingExisting]);
+
+  // 2) Also re-sync just the solution when a language's solution is added
+  // (typed, pasted, or AI-generated) after both statements already exist —
+  // e.g. admin pastes a solution into only the English side later.
+  useEffect(() => {
+    if (loadingExisting || autoTranslating) return;
+    const timer = setTimeout(async () => {
+      const bothStatementsExist = enableEn && en.statement.trim() && enableHi && hi.statement.trim();
+      if (!bothStatementsExist) return;
+      let sourceLang: "hi" | "en" | null = null;
+      if (en.solution.trim() && !hi.solution.trim()) sourceLang = "en";
+      else if (hi.solution.trim() && !en.solution.trim()) sourceLang = "hi";
+      if (!sourceLang) return;
+
+      const source = sourceLang === "hi" ? hi : en;
+      const targetLang = sourceLang === "hi" ? "en" : "hi";
+      setAutoTranslating(true);
+      try {
+        const res = await fetch("/api/ai/translate-question", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            subject: meta.subject,
+            sourceLang,
+            statement: source.statement,
+            options: isIntegerType ? undefined : source.options,
+            solution: source.solution,
+            isIntegerType,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok && data.solution) {
+          const setTarget = targetLang === "hi" ? setHi : setEn;
+          setTarget((prev) => (prev.solution.trim() ? prev : { ...prev, solution: data.solution }));
+        }
+      } catch {
+        // Silent — background convenience only.
+      } finally {
+        setAutoTranslating(false);
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [en.solution, hi.solution, enableEn, enableHi, loadingExisting]);
+
+  // 3) Auto-suggest the correct option once a language has a statement +
+  // options but no answer marked yet. Clearly flagged via `aiSuggested` so
+  // the admin knows to double-check it (cleared the moment they click any
+  // option themselves). Skipped for Integer/Numerical — the underlying API
+  // needs a real options list, which those question types don't have.
+  useEffect(() => {
+    if (loadingExisting || isIntegerType) return;
+    const timer = setTimeout(async () => {
+      for (const lang of ["en", "hi"] as const) {
+        const enabled = lang === "en" ? enableEn : enableHi;
+        const content = lang === "en" ? en : hi;
+        const setter = lang === "en" ? setEn : setHi;
+        if (!enabled || autoSolving[lang]) continue;
+        if (!content.statement.trim() || !content.options.some((o) => o.text.trim())) continue;
+        if (content.correctOptionIds.length > 0 && content.correctOptionIds[0]) continue; // already answered
+
+        setAutoSolving((s) => ({ ...s, [lang]: true }));
+        try {
+          const res = await fetch("/api/ai/solve-question", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              subject: meta.subject,
+              chapter: meta.chapter,
+              topic: meta.topic,
+              statement: content.statement,
+              options: content.options,
+              language: lang,
+              questionType: meta.type,
+            }),
+          });
+          const data = await res.json();
+          if (res.ok && data.correctOptionId) {
+            setter((prev) =>
+              prev.correctOptionIds[0] ? prev : { ...prev, correctOptionIds: [data.correctOptionId], solution: prev.solution || data.solution || "" }
+            );
+            setAiSuggested((s) => ({ ...s, [lang]: true }));
+          }
+        } catch {
+          // Silent — background convenience only.
+        } finally {
+          setAutoSolving((s) => ({ ...s, [lang]: false }));
+        }
+      }
+    }, 1800);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enKey, hiKey, enableEn, enableHi, loadingExisting, isIntegerType]);
+
+  const dppIdParam = searchParams.get("dppId");
+  const testIdParam = searchParams.get("testId");
+  function backDestination() {
+    if (dppIdParam) return `/admin/dpps/${dppIdParam}/add-questions`;
+    if (sectionId) return testIdParam ? `/admin/tests/${testIdParam}/add-questions` : "/admin/questions";
+    return backLink();
+  }
+  function hasUnsavedContent() {
+    return !!(hi.statement.trim() || en.statement.trim() || imageUrl);
+  }
+  function handleBack() {
+    if (hasUnsavedContent() && !window.confirm("Discard unsaved changes?")) return;
+    router.push(backDestination());
   }
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-5xl">
+      <div className="flex items-center justify-between mb-4">
+        <button type="button" onClick={handleBack} className="text-sm text-brand hover:opacity-70 transition-opacity duration-150">
+          ← Back
+        </button>
+        {justSavedCode && (
+          <span className="text-sm text-success font-medium bg-green-50 px-3 py-1 rounded-full">
+            ✓ {justSavedCode} added — ready for the next question
+          </span>
+        )}
+      </div>
       <h1 className="text-2xl font-semibold text-slate-900 mb-6">{editId ? "Edit Question" : "New Question"}</h1>
       {loadingExisting && (
         <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
@@ -448,7 +657,7 @@ export default function NewQuestionPage() {
           />
         </div>
       )}
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={(e) => handleSubmit(e, false)} className="space-y-6">
         {error && <div className="text-sm text-danger">{error}</div>}
 
         <div className="card grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -675,170 +884,157 @@ export default function NewQuestionPage() {
           )}
         </div>
 
-        <div className="card">
-          <div className="flex items-center gap-4 mb-4">
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={enableHi} onChange={(e) => setEnableHi(e.target.checked)} />
-              हिंदी (Hindi)
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={enableEn} onChange={(e) => setEnableEn(e.target.checked)} />
-              English
-            </label>
-          </div>
-
-          <div className="flex gap-2 mb-4 border-b">
-            {enableHi && (
-              <button
-                type="button"
-                onClick={() => setActiveLang("hi")}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors duration-150 ${
-                  activeLang === "hi" ? "border-brand text-brand" : "border-transparent text-slate-500 hover:text-ink"
-                }`}
-              >
-                हिंदी
-              </button>
-            )}
-            {enableEn && (
-              <button
-                type="button"
-                onClick={() => setActiveLang("en")}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors duration-150 ${
-                  activeLang === "en" ? "border-brand text-brand" : "border-transparent text-slate-500 hover:text-ink"
-                }`}
-              >
-                English
-              </button>
-            )}
-          </div>
-
-          <div>
-            <label className="label">Statement ({activeLang.toUpperCase()})</label>
-            <FormulaEditor
-              value={current.statement}
-              onChange={(v) => setCurrent({ ...current, statement: v })}
-              rows={3}
-              placeholder={
-                activeLang === "hi"
-                  ? "प्रश्न यहाँ लिखें..."
-                  : "Enter question statement..."
-              }
-            />
-
-            {isIntegerType ? (
-              <>
-                <label className="label mt-4">Correct {meta.type === "INTEGER" ? "Integer" : "Numerical"} Value</label>
-                <input
-                  className="input font-mono text-sm max-w-xs"
-                  value={current.correctOptionIds[0] || ""}
-                  onChange={(e) => setCurrent({ ...current, correctOptionIds: [e.target.value] })}
-                  placeholder={meta.type === "INTEGER" ? "e.g. 42" : "e.g. 9.8"}
-                />
-              </>
-            ) : (
-              <>
-                <label className="label mt-4">Options — click ✓ to mark correct</label>
-                <div className="space-y-2">
-                  {current.options.map((opt, idx) => (
-                    <div key={opt.id} className="flex items-start gap-2">
-                      <button
-                        type="button"
-                        onClick={() => toggleCorrect(opt.id)}
-                        className={`w-8 h-8 rounded-full text-sm font-semibold flex-shrink-0 mt-0 active:scale-90 transition-all duration-150 ${
-                          current.correctOptionIds.includes(opt.id)
-                            ? "bg-success text-white shadow-sm"
-                            : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                        }`}
-                      >
-                        {opt.id}
-                      </button>
-                      <div className="flex-1">
-                        <FormulaEditor
-                          value={opt.text}
-                          onChange={(v) => updateOption(idx, v)}
-                          rows={1}
-                          compact
-                          placeholder={`Option ${opt.id}`}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+        {/* Side-by-side bilingual editor — same layout used everywhere a
+            question is authored (Question Bank, Test, DPP), matching the
+            interaction language teachers already know. */}
+        <div className="flex items-center gap-4 flex-wrap">
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={enableHi} onChange={(e) => setEnableHi(e.target.checked)} />
+            हिंदी (Hindi)
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={enableEn} onChange={(e) => setEnableEn(e.target.checked)} />
+            English
+          </label>
+          {autoTranslating && (
+            <span className="text-xs text-brand flex items-center gap-1">
+              <span className="animate-pulse">🌐</span> Auto-translating...
+            </span>
+          )}
         </div>
 
-        <div className="card">
-          <div className="flex items-center justify-between mb-2">
-            <label className="label mb-0">
-              Solution / Explanation ({activeLang === "hi" ? "हिंदी" : "English"}) <span className="text-danger">*</span> (shown to students post-test, matching this language)
-            </label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {(["hi", "en"] as const).map((lang) => {
+            const enabled = lang === "hi" ? enableHi : enableEn;
+            if (!enabled) return null;
+            const content = lang === "hi" ? hi : en;
+            const setter = lang === "hi" ? setHi : setEn;
+            const result = aiResult[lang];
+            return (
+              <div key={lang} className="card">
+                <div className="text-sm font-semibold text-brand mb-2">{lang === "hi" ? "हिंदी" : "English"}</div>
+
+                <label className="label">Statement</label>
+                <FormulaEditor
+                  value={content.statement}
+                  onChange={(v) => setter({ ...content, statement: v })}
+                  rows={3}
+                  placeholder={lang === "hi" ? "प्रश्न यहाँ लिखें..." : "Enter question statement..."}
+                />
+
+                {isIntegerType ? (
+                  <>
+                    <label className="label mt-4">Correct {meta.type === "INTEGER" ? "Integer" : "Numerical"} Value</label>
+                    <input
+                      className="input font-mono text-sm max-w-xs"
+                      value={content.correctOptionIds[0] || ""}
+                      onChange={(e) => setter({ ...content, correctOptionIds: [e.target.value] })}
+                      placeholder={meta.type === "INTEGER" ? "e.g. 42" : "e.g. 9.8"}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <label className="label mt-4 flex items-center gap-2 flex-wrap">
+                      Options — click ✓ to mark correct
+                      {autoSolving[lang] && (
+                        <span className="text-xs text-brand font-normal flex items-center gap-1">
+                          <span className="animate-pulse">🤖</span> AI thinking...
+                        </span>
+                      )}
+                      {!autoSolving[lang] && aiSuggested[lang] && content.correctOptionIds[0] && (
+                        <span className="text-xs text-warning font-normal">🤖 AI-suggested — verify</span>
+                      )}
+                    </label>
+                    <div className="space-y-2">
+                      {content.options.map((opt, idx) => (
+                        <div key={opt.id} className="flex items-start gap-2">
+                          <button
+                            type="button"
+                            onClick={() => toggleCorrectFor(lang, opt.id)}
+                            className={`w-8 h-8 rounded-full text-sm font-semibold flex-shrink-0 mt-0 active:scale-90 transition-all duration-150 ${
+                              content.correctOptionIds.includes(opt.id)
+                                ? "bg-success text-white shadow-sm"
+                                : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                            }`}
+                          >
+                            {opt.id}
+                          </button>
+                          <div className="flex-1">
+                            <FormulaEditor
+                              value={opt.text}
+                              onChange={(v) => updateOptionFor(lang, idx, v)}
+                              rows={1}
+                              compact
+                              placeholder={`Option ${opt.id}`}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                <div className="flex items-center justify-between mb-2 mt-5">
+                  <label className="label mb-0">
+                    Solution ({lang === "hi" ? "हिंदी" : "English"}) <span className="text-danger">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleAiSolveFor(lang)}
+                    disabled={aiSolving}
+                    className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200 active:scale-95 transition-all duration-150 whitespace-nowrap"
+                  >
+                    {aiSolving ? "Thinking..." : "✨ Solve with AI"}
+                  </button>
+                </div>
+                {result && (
+                  <div className={`text-xs rounded-lg px-3 py-2 mb-2 ${result.confidence === "low" ? "bg-amber-50 text-warning" : "bg-purple-50 text-purple-700"}`}>
+                    AI confidence: <strong>{result.confidence}</strong>
+                    {result.correctOptionId && (
+                      <>
+                        {" "}
+                        · AI thinks <strong>{result.correctOptionId}</strong>
+                        {content.correctOptionIds[0] !== result.correctOptionId && (
+                          <>
+                            {" "}
+                            (you marked <strong>{content.correctOptionIds[0] || "none"}</strong> —{" "}
+                            <button type="button" onClick={() => applyAiAnswerFor(lang)} className="underline font-medium">
+                              use AI's answer
+                            </button>
+                            )
+                          </>
+                        )}
+                      </>
+                    )}
+                    <div className="mt-1 text-slate-500">⚠️ Always verify before publishing.</div>
+                  </div>
+                )}
+                <FormulaEditor
+                  value={content.solution}
+                  onChange={(v) => setter({ ...content, solution: v })}
+                  rows={3}
+                  placeholder="Required — explain the correct approach..."
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button className="btn-primary" disabled={loading || uploadingImage}>
+            {loading ? "Saving..." : editId ? "Update Question" : sectionId || dppIdParam ? "Save & Next" : "Save Question"}
+          </button>
+          {!editId && (sectionId || dppIdParam) && (
             <button
               type="button"
-              onClick={handleAiSolve}
-              disabled={aiSolving}
-              className="text-xs px-3 py-1.5 rounded-full bg-purple-100 text-purple-700 font-medium hover:bg-purple-200 active:scale-95 transition-all duration-150 whitespace-nowrap"
+              onClick={(e) => handleSubmit(e as any, true)}
+              disabled={loading || uploadingImage}
+              className="btn-secondary"
             >
-              {aiSolving ? "Thinking..." : "✨ Solve with AI"}
+              Save & Exit
             </button>
-          </div>
-          {aiError && <p className="text-xs text-danger mb-2">{aiError}</p>}
-          {aiResult && (
-            <div
-              className={`text-xs rounded-lg px-3 py-2 mb-2 ${
-                aiResult.confidence === "low" ? "bg-amber-50 text-warning" : "bg-purple-50 text-purple-700"
-              }`}
-            >
-              AI confidence: <strong>{aiResult.confidence}</strong>
-              {!isIntegerType && aiResult.correctOptionId && (
-                <>
-                  {" "}
-                  · AI thinks the answer is <strong>{aiResult.correctOptionId}</strong>
-                  {current.correctOptionIds[0] !== aiResult.correctOptionId && (
-                    <>
-                      {" "}
-                      (you marked <strong>{current.correctOptionIds[0] || "none"}</strong> —{" "}
-                      <button type="button" onClick={applyAiAnswer} className="underline font-medium">
-                        use AI's answer
-                      </button>
-                      )
-                    </>
-                  )}
-                </>
-              )}
-              {isIntegerType && aiResult.correctOptionId && (
-                <>
-                  {" "}
-                  · AI computed <strong>{aiResult.correctOptionId}</strong>
-                  {current.correctOptionIds[0] !== aiResult.correctOptionId && (
-                    <>
-                      {" "}
-                      (you entered <strong>{current.correctOptionIds[0] || "none"}</strong> —{" "}
-                      <button type="button" onClick={applyAiAnswer} className="underline font-medium">
-                        use AI's value
-                      </button>
-                      )
-                    </>
-                  )}
-                </>
-              )}
-              <div className="mt-1 text-slate-500">
-                ⚠️ AI can make mistakes, especially on calculations — always verify before publishing.
-              </div>
-            </div>
           )}
-          <FormulaEditor
-            value={current.solution}
-            onChange={(v) => setCurrent({ ...current, solution: v })}
-            rows={3}
-            placeholder="Explain the correct approach... or click 'Solve with AI' above"
-          />
         </div>
-
-        <button className="btn-primary" disabled={loading || uploadingImage}>
-          {loading ? "Saving..." : editId ? "Update Question" : "Save Question"}
-        </button>
       </form>
 
       {createdCode && (

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import DeleteQuestionButton from "@/components/DeleteQuestionButton";
+import FormulaText from "@/components/FormulaText";
 
 export default async function ChapterQuestionsPage({
   params,
@@ -94,9 +95,21 @@ export default async function ChapterQuestionsPage({
                     {q.category === "PYQ" ? q.pyqSource || "PYQ" : q.category || "—"}
                   </td>
                   <td className="py-2 pr-4">{q.translations.map((t) => t.language.toUpperCase()).join(" + ")}</td>
-                  <td className="py-2 pr-4 text-slate-500">{preview}...</td>
+                  <td className="py-2 pr-4 text-slate-500 max-w-xs">
+                    <div className="line-clamp-2">
+                      <FormulaText text={preview} />
+                      {(q.translations[0]?.statement?.length || 0) > 60 && "..."}
+                    </div>
+                  </td>
                   <td className="py-2 pr-4">
                     <Link
+  href={`/admin/questions/review/${q.id}`}
+  className="text-success text-xs underline mr-2 hover:opacity-70 transition-opacity duration-150"
+>
+  Review
+</Link>
+
+<Link
   href={`/admin/questions/new?edit=${q.id}`}
   className="text-brand text-xs underline mr-2 hover:opacity-70 transition-opacity duration-150"
 >
@@ -110,7 +123,7 @@ export default async function ChapterQuestionsPage({
   History
 </Link>
 
-<DeleteQuestionButton questionId={q.id} />
+<DeleteQuestionButton questionId={q.id} archived={q.archived} />
                   </td>
                 </tr>
               );

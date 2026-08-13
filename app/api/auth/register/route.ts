@@ -107,6 +107,23 @@ export async function POST(req: NextRequest) {
     html: buildWelcomeEmailHtml({ name, studentId: studentIdCode, email }),
   });
 
+  // Best-effort welcome notification — only ever fires here, after the
+  // account row above has actually been created, so a failed/incomplete
+  // registration (which would have thrown before this point) never sends one.
+  try {
+    await prisma.notification.create({
+      data: {
+        userId: user.id,
+        type: "WELCOME",
+        title: "👋 Welcome to Atomic Pathshala!",
+        message: "Welcome! Your preparation journey starts here. Stay consistent, keep learning, and keep moving forward. 🚀",
+        deepLink: "/student",
+      },
+    });
+  } catch {
+    // Non-critical — don't fail registration over a notification row.
+  }
+
   return NextResponse.json(
     { id: user.id, studentIdCode, emailSent: emailResult.sent },
     { status: 201 }
