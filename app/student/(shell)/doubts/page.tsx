@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { SYLLABUS } from "@/lib/syllabusData";
+import Combobox from "@/components/Combobox";
 
 type DoubtRow = {
   id: string;
@@ -112,17 +113,13 @@ export default function DoubtsPage() {
                 <option key={s}>{s}</option>
               ))}
             </select>
-            <select
-              className="input"
+            <Combobox
               value={form.chapter}
-              onChange={(e) => setForm({ ...form, chapter: e.target.value })}
+              onChange={(v) => setForm({ ...form, chapter: v })}
+              options={chapters}
               disabled={!form.subject}
-            >
-              <option value="">Chapter (optional)</option>
-              {chapters.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
+              placeholder={form.subject ? "Chapter (optional)" : "Select subject first"}
+            />
           </div>
           <textarea
             className="input"

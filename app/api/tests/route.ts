@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   }
   const body = await req.json();
   const {
-    testSeriesId, name, description, testType, examType, questionFormat, instructions,
+    testSeriesId, name, description, testType, chapter, examType, questionFormat, instructions,
     languageMode, durationMin, openTime, closeTime, correctMarks, incorrectMarks,
     negativeMarkingEnabled, sections,
   } = body;
@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
       code,
       description: description || null,
       testType: testType || null,
+      chapter: testType === "CHAPTER_TEST" ? chapter || null : null,
       examType: examType || null,
       questionFormat: questionFormat || "OBJECTIVE",
       instructions: instructions || null,

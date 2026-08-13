@@ -97,10 +97,22 @@ export async function callGemini(opts: { system: string; user: string; maxTokens
     lastGoodKeyIndex = idx;
 
     const data = await res.json();
-    const parts = data.candidates?.[0]?.content?.parts || [];
+    const candidate = data.candidates?.[0];
+    const parts = candidate?.content?.parts || [];
     const text = parts.map((p: any) => p.text || "").join("");
+    const finishReason = candidate?.finishReason;
+
+    // MAX_TOKENS means Gemini was cut off mid-generation — `text` still
+    // contains SOMETHING, but it's guaranteed incomplete/invalid JSON, so
+    // there's no point returning it for parseJsonResponse to fail on with a
+    // confusing raw parser error. This is a much more reliable truncation
+    // signal than trying to guess from the text's shape afterwards.
+    if (finishReason === "MAX_TOKENS") {
+      throw new Error(
+        "The AI response was cut off before it finished (hit the token limit). Try generating fewer questions at once, or a shorter/simpler request."
+      );
+    }
     if (!text) {
-      const finishReason = data.candidates?.[0]?.finishReason;
       throw new Error(`Gemini returned no text (finishReason: ${finishReason || "unknown"})`);
     }
     return text;
@@ -170,10 +182,16 @@ export async function callGeminiVision(opts: {
     }
     lastGoodKeyIndex = idx;
     const data = await res.json();
-    const parts = data.candidates?.[0]?.content?.parts || [];
+    const candidate = data.candidates?.[0];
+    const parts = candidate?.content?.parts || [];
     const text = parts.map((p: any) => p.text || "").join("");
+    const finishReason = candidate?.finishReason;
+    if (finishReason === "MAX_TOKENS") {
+      throw new Error(
+        "The AI response was cut off before it finished (hit the token limit). Try a shorter/simpler request."
+      );
+    }
     if (!text) {
-      const finishReason = data.candidates?.[0]?.finishReason;
       throw new Error(`Gemini returned no text (finishReason: ${finishReason || "unknown"})`);
     }
     return text;
@@ -189,6 +207,60 @@ export async function callGeminiVision(opts: {
 // JSON.parse. If the direct parse fails, we run a best-effort repair pass
 // that walks the string and escapes anything invalid found *inside* a JSON
 // string literal, then retry.
+// Last-resort recovery for a response that's broken as a WHOLE but likely
+// still has several individually well-formed objects inside a named array
+// (e.g. multi-question generation where question #3 has a stray unescaped
+// character but #1 and #2 are perfectly fine JSON). Scans for `"key": [`,
+// then walks bracket/quote-depth to find each top-level `{...}` object in
+// that array and tries to JSON.parse it individually — keeping whatever
+// parses cleanly and silently dropping whatever doesn't, rather than failing
+// the entire batch over one bad item.
+export function salvageArrayItems<T>(raw: string, arrayKey: string): T[] {
+  const cleaned = raw
+    .trim()
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/```\s*$/i, "")
+    .trim();
+  const repaired = repairJsonEscaping(cleaned);
+
+  const keyMatch = repaired.match(new RegExp(`"${arrayKey}"\\s*:\\s*\\[`));
+  if (!keyMatch || keyMatch.index === undefined) return [];
+
+  const items: T[] = [];
+  let i = keyMatch.index + keyMatch[0].length;
+  while (i < repaired.length) {
+    // Skip whitespace/commas between array items.
+    while (i < repaired.length && /[\s,]/.test(repaired[i])) i++;
+    if (repaired[i] !== "{") break; // hit `]` or ran out — done
+
+    const start = i;
+    let depth = 0;
+    let inStr = false;
+    for (; i < repaired.length; i++) {
+      const ch = repaired[i];
+      if (ch === '"' && repaired[i - 1] !== "\\") inStr = !inStr;
+      if (inStr) continue;
+      if (ch === "{") depth++;
+      if (ch === "}") {
+        depth--;
+        if (depth === 0) {
+          i++;
+          break;
+        }
+      }
+    }
+    const candidate = repaired.slice(start, i);
+    try {
+      items.push(JSON.parse(candidate) as T);
+    } catch {
+      // This one item is broken (often the last, truncated one) — skip it
+      // and keep whatever else parses.
+    }
+  }
+  return items;
+}
+
 export function parseJsonResponse<T>(raw: string): T {
   const cleaned = raw
     .trim()

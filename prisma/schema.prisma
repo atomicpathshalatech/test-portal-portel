@@ -125,6 +125,7 @@ model Test {
   negativeMarkingEnabled Boolean      @default(true)
   questionFormat         String       @default("OBJECTIVE")
   testType               String?
+  chapter                String? // set when testType = CHAPTER_TEST, drives student-side chapter-wise browsing
   archived               Boolean      @default(false)
   attempts               Attempt[]
   sections               Section[]

@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { SYLLABUS } from "@/lib/syllabusData";
+import Combobox from "@/components/Combobox";
 
 type SectionDraft = { name: string; subject: string; targetCount: number; marksPerQuestion?: number; negativeMarks?: number };
 
@@ -22,6 +24,7 @@ export default function TestBuilderPage() {
     name: "",
     description: "",
     testType: "FULL_SYLLABUS",
+    chapter: "",
     examType: "NEET",
     questionFormat: "OBJECTIVE",
     instructions: "",
@@ -112,6 +115,10 @@ export default function TestBuilderPage() {
       setError("Every section needs a name, subject, and a target question count of at least 1.");
       return;
     }
+    if (form.testType === "CHAPTER_TEST" && !form.chapter.trim()) {
+      setError("Select or type a chapter for this Chapter Test.");
+      return;
+    }
 
     const closeTime = new Date(new Date(form.openTime).getTime() + form.durationMin * 60000).toISOString();
 
@@ -165,7 +172,7 @@ export default function TestBuilderPage() {
           </div>
           <div>
             <label className="label">Test Type</label>
-            <select className="input" value={form.testType} onChange={(e) => setForm({ ...form, testType: e.target.value })}>
+            <select className="input" value={form.testType} onChange={(e) => setForm({ ...form, testType: e.target.value, chapter: "" })}>
               <option value="FULL_SYLLABUS">Full Syllabus Test</option>
               <option value="CHAPTER_TEST">Chapter Test</option>
               <option value="MINOR">Minor Test</option>
@@ -174,6 +181,18 @@ export default function TestBuilderPage() {
               <option value="PRACTICE">Practice Test</option>
             </select>
           </div>
+          {form.testType === "CHAPTER_TEST" && (
+            <div>
+              <label className="label">Chapter</label>
+              <Combobox
+                value={form.chapter}
+                onChange={(v) => setForm({ ...form, chapter: v })}
+                options={Object.keys(SYLLABUS[sections[0]?.subject || "Physics"] || {})}
+                placeholder="Select or type a chapter..."
+              />
+              <p className="text-xs text-slate-400 mt-1">Drives student-side "My Tests → Chapter Wise" browsing — matched to the first section's subject.</p>
+            </div>
+          )}
           <div>
             <label className="label">Exam Type</label>
             <select className="input" value={form.examType} onChange={(e) => setForm({ ...form, examType: e.target.value })}>

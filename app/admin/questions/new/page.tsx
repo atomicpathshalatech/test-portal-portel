@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import FormulaEditor from "@/components/FormulaEditor";
 import FormulaText from "@/components/FormulaText";
+import Combobox from "@/components/Combobox";
 import { SYLLABUS, resolveBiologySubject } from "@/lib/syllabusData";
 
 type OptionRow = { id: string; text: string };
@@ -678,18 +679,12 @@ export default function NewQuestionPage() {
           </div>
           <div>
             <label className="label">Chapter</label>
-            <select
-              className="input"
+            <Combobox
               value={meta.chapter}
-              onChange={(e) => setMeta({ ...meta, chapter: e.target.value, topic: "" })}
-            >
-              <option value="">Select chapter...</option>
-              {chapters.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setMeta({ ...meta, chapter: v, topic: "" })}
+              options={chapters}
+              placeholder="Select or type a chapter..."
+            />
           </div>
           <div>
             <label className="label">Topic</label>

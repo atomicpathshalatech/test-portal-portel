@@ -76,3 +76,15 @@ img, table {
 .safe-area-bottom {
   padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
 }
+
+/* Accessibility: honor the OS-level reduced-motion preference across the
+   whole app — every transition/animation collapses to near-instant instead
+   of being individually special-cased per component. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

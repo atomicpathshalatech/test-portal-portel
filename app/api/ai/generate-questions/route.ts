@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { isAdminTier } from "@/lib/permissions";
-import { callGemini, parseJsonResponse } from "@/lib/gemini";
+import { callGemini, parseJsonResponse, salvageArrayItems } from "@/lib/gemini";
 
 type GeneratedQuestion = {
   statement_en?: string;
@@ -58,14 +58,30 @@ Difficulty: ${difficulty}`;
 
   let raw = "";
   try {
-    // Scale the token budget with how much text we've actually asked for —
-    // a flat cap was too low for multiple/bilingual questions and Gemini
-    // would get cut off mid-question, producing invalid (truncated) JSON.
-    const perQuestionTokens = wantsEn && wantsHi ? 1400 : 900;
-    const maxTokens = Math.min(8192, 800 + n * perQuestionTokens);
+    // A generous cap — over-requesting costs nothing extra (Gemini bills
+    // actual tokens generated, not the ceiling), so there's no reason to be
+    // stingy here. This was the main cause of truncated/invalid JSON on
+    // multi-question bilingual generations.
+    const perQuestionTokens = wantsEn && wantsHi ? 2200 : 1400;
+    const maxTokens = Math.min(16384, 1500 + n * perQuestionTokens);
     raw = await callGemini({ system, user, maxTokens });
-    const parsed = parseJsonResponse<{ questions: GeneratedQuestion[] }>(raw);
-    return NextResponse.json(parsed);
+    try {
+      const parsed = parseJsonResponse<{ questions: GeneratedQuestion[] }>(raw);
+      return NextResponse.json(parsed);
+    } catch (parseErr) {
+      // Last resort: even if the response as a whole is broken, try to
+      // recover whichever individual questions in the array ARE valid JSON
+      // — one bad question (e.g. a stray unescaped character) shouldn't
+      // waste the other N-1 that generated fine.
+      const salvaged = salvageArrayItems<GeneratedQuestion>(raw, "questions");
+      if (salvaged.length > 0) {
+        return NextResponse.json({
+          questions: salvaged,
+          warning: `Only ${salvaged.length} of ${n} question(s) could be recovered — the rest had a formatting issue. Review carefully before saving.`,
+        });
+      }
+      throw parseErr;
+    }
   } catch (err: any) {
     return NextResponse.json(
       {

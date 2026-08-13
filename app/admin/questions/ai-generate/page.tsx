@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import FormulaEditor from "@/components/FormulaEditor";
+import Combobox from "@/components/Combobox";
 import { SYLLABUS, resolveBiologySubject } from "@/lib/syllabusData";
 
 type OptionRow = { id: string; text: string };
@@ -67,6 +68,7 @@ export default function AiGenerateQuestionsPage() {
       return;
     }
     setDrafts((data.questions || []).map((q: any) => ({ ...q, included: true })));
+    if (data.warning) setError(`⚠️ ${data.warning}`);
   }
 
   function updateDraft(idx: number, patch: Partial<Draft>) {
@@ -147,18 +149,12 @@ export default function AiGenerateQuestionsPage() {
         </div>
         <div>
           <label className="label">Chapter</label>
-          <select
-            className="input"
+          <Combobox
             value={form.chapter}
-            onChange={(e) => setForm({ ...form, chapter: e.target.value, topic: "" })}
-          >
-            <option value="">Select chapter...</option>
-            {chapters.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => setForm({ ...form, chapter: v, topic: "" })}
+            options={chapters}
+            placeholder="Select or type a chapter..."
+          />
         </div>
         <div>
           <label className="label">Topic (optional)</label>

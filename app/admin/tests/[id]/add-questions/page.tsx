@@ -1147,14 +1147,14 @@ export default function UnifiedQuestionAuthoringPage() {
             </p>
 
             <label className="label text-xs">Chapter *</label>
-            <select
-              className="input mb-3"
-              value={form.chapter}
-              onChange={(e) => setForm({ ...form, chapter: e.target.value, topic: "", subTopic: "" })}
-            >
-              <option value="">Select chapter...</option>
-              {chapters.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <div className="mb-3">
+              <Combobox
+                value={form.chapter}
+                onChange={(v) => setForm({ ...form, chapter: v, topic: "", subTopic: "" })}
+                options={chapters}
+                placeholder="Select or type a chapter..."
+              />
+            </div>
 
             <label className="label text-xs">Topic *</label>
             <div className="mb-3">
@@ -1270,10 +1270,14 @@ export default function UnifiedQuestionAuthoringPage() {
             <div className="input bg-slate-50 text-slate-500 mb-4">{activeSection.subject}</div>
 
             <label className="label text-xs">Chapter</label>
-            <select className="input mb-4" value={form.chapter} onChange={(e) => setForm({ ...form, chapter: e.target.value, topic: "", subTopic: "" })}>
-              <option value="">Select chapter...</option>
-              {chapters.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <div className="mb-4">
+              <Combobox
+                value={form.chapter}
+                onChange={(v) => setForm({ ...form, chapter: v, topic: "", subTopic: "" })}
+                options={chapters}
+                placeholder="Select or type a chapter..."
+              />
+            </div>
 
             <label className="label text-xs">Topic</label>
             <div className="mb-4">

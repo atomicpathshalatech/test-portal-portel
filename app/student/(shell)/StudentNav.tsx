@@ -6,6 +6,7 @@ import LogoutButton from "@/components/LogoutButton";
 const LINKS = [
   { href: "/student", label: "Dashboard", icon: "dashboard" },
   { href: "/student/schedule", label: "Schedule", icon: "calendar_month" },
+  { href: "/student/my-tests", label: "My Tests", icon: "quiz" },
   { href: "/student/dpp", label: "DPP", icon: "today" },
   { href: "/student/results", label: "Results", icon: "bar_chart" },
   { href: "/student/rank-tracker", label: "Rank Tracker", icon: "trophy" },

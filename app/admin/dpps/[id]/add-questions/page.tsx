@@ -884,10 +884,14 @@ export default function DppAddQuestionsPage() {
             <p className="text-xs text-slate-500 mb-4">Complete this before the question editor opens — DPP: <strong>{dpp.name}</strong> ({dpp.subject})</p>
 
             <label className="label text-xs">Chapter *</label>
-            <select className="input mb-3" value={form.chapter} onChange={(e) => setForm({ ...form, chapter: e.target.value, topic: "", subTopic: "" })}>
-              <option value="">Select chapter...</option>
-              {chapters.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <div className="mb-3">
+              <Combobox
+                value={form.chapter}
+                onChange={(v) => setForm({ ...form, chapter: v, topic: "", subTopic: "" })}
+                options={chapters}
+                placeholder="Select or type a chapter..."
+              />
+            </div>
 
             <label className="label text-xs">Topic</label>
             <div className="mb-3">
@@ -933,9 +937,14 @@ export default function DppAddQuestionsPage() {
               <button onClick={() => setDrawerOpen(false)} className="text-slate-400 hover:text-slate-600 active:scale-90 transition-all duration-150">✕</button>
             </div>
             <label className="label text-xs">Chapter</label>
-            <select className="input mb-4" value={form.chapter} onChange={(e) => setForm({ ...form, chapter: e.target.value, topic: "", subTopic: "" })}>
-              {chapters.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <div className="mb-4">
+              <Combobox
+                value={form.chapter}
+                onChange={(v) => setForm({ ...form, chapter: v, topic: "", subTopic: "" })}
+                options={chapters}
+                placeholder="Select or type a chapter..."
+              />
+            </div>
             <label className="label text-xs">Topic</label>
             <div className="mb-4">
               <Combobox value={form.topic} onChange={(v) => setForm({ ...form, topic: v, subTopic: "" })} options={topics} placeholder="Select or type a topic..." />

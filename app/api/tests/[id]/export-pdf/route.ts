@@ -10,14 +10,21 @@ export const maxDuration = 60;
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const session = getSession();
-  if (!session || !isAdminTier(session.role)) {
+  if (!session) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   }
 
   // One combined PDF per the export overhaul: Cover -> Questions -> [Answer
   // Key -> Solutions] if withSolutions=true. Replaces the old separate
   // Question-PDF / Solution-PDF pair.
-  const withSolutions = req.nextUrl.searchParams.get("withSolutions") === "true";
+  //
+  // Students get solutions included by default (My Tests -> Download PDF is
+  // framed as "Test + Solutions" — a single download, not two variants like
+  // the admin/DPP flows). Admin-tier keeps the explicit query-param control
+  // it already had.
+  const withSolutions = isAdminTier(session.role)
+    ? req.nextUrl.searchParams.get("withSolutions") === "true"
+    : req.nextUrl.searchParams.get("withSolutions") !== "false";
   const lang = (req.nextUrl.searchParams.get("lang") === "hi" ? "hi" : "en") as "hi" | "en";
 
   const test = await prisma.test.findUnique({
@@ -35,6 +42,12 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     },
   });
   if (!test) return NextResponse.json({ message: "Test not found" }, { status: 404 });
+
+  // Students (and anyone below admin-tier) can only ever download a
+  // published test's PDF — drafts/under-review tests stay admin-only.
+  if (!isAdminTier(session.role) && test.status !== "PUBLISHED") {
+    return NextResponse.json({ message: "Not found" }, { status: 404 });
+  }
 
   const sections = test.sections.map((sec) => ({
     name: sec.name,

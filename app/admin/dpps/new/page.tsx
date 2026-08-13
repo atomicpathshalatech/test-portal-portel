@@ -80,10 +80,12 @@ export default function NewDppPage() {
           </div>
           <div>
             <label className="label">Chapter</label>
-            <select className="input" required value={form.chapter} onChange={(e) => setForm({ ...form, chapter: e.target.value, topics: [] })}>
-              <option value="">Select chapter...</option>
-              {chapters.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <Combobox
+              value={form.chapter}
+              onChange={(v) => setForm({ ...form, chapter: v, topics: [] })}
+              options={chapters}
+              placeholder="Select or type a chapter..."
+            />
           </div>
         </div>
 
